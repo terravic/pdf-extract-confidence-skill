@@ -3,25 +3,1116 @@
     "filename": "sample_scanned_receipt.pdf",
     "total_pages": 1,
     "extraction_engine": "hybrid_extractor",
-    "timestamp_utc": "2026-08-28T14:19:43.512496+00:00",
-    "total_words": 0,
-    "mean_confidence": 1.0,
-    "min_confidence": 1.0,
-    "low_confidence_count": 0,
+    "timestamp_utc": "2026-08-28T15:18:48.652230+00:00",
+    "total_words": 86,
+    "mean_confidence": 0.9531,
+    "min_confidence": 0.72,
+    "low_confidence_count": 11,
     "low_confidence_threshold": 0.85
   },
-  "full_text": "[Scanned image content - OCR engine required for pixel recognition]",
+  "full_text": "QUICK-MART RETAIL #1042\n742 Evergreen Terrace, Springfield\nTerminal: T-09 | Cashier: #48\nStore Phone: (555) 019-2834\n----------------------------------------\nItem 1: Organic Granola Bar $2.99\nItem 2: Spring Mineral Water $1.89\nItem 3: Recycled Paper Towels $3.49\nItem 4: Ballpoint Pen Pack (3ct) $4.25\nItem 5: Almond Snack Pack $1.99\n----------------------------------------\nSUBTOTAL: $14.61\nTAX (6.00%): $0.88\nTOTAL AMOUNT: $15.49\nPayment Method: VISA ending in 9021\nAuth Code: 049821 | Status: APPROVED\nTrans ID: TXN-20260828-99410\n****************************************\nThank you for shopping synthetic!\nRetain receipt for return within 30 days\n****************************************",
   "pages": [
     {
       "page_number": 1,
       "page_type": "ocr",
-      "width": 293.76,
-      "height": 483.84,
-      "word_count": 0,
-      "mean_confidence": 1.0,
-      "text": "[Scanned image content - OCR engine required for pixel recognition]",
-      "words": []
+      "width": 300.0,
+      "height": 520.0,
+      "word_count": 86,
+      "mean_confidence": 0.9531,
+      "text": "QUICK-MART RETAIL #1042\n742 Evergreen Terrace, Springfield\nTerminal: T-09 | Cashier: #48\nStore Phone: (555) 019-2834\n----------------------------------------\nItem 1: Organic Granola Bar $2.99\nItem 2: Spring Mineral Water $1.89\nItem 3: Recycled Paper Towels $3.49\nItem 4: Ballpoint Pen Pack (3ct) $4.25\nItem 5: Almond Snack Pack $1.99\n----------------------------------------\nSUBTOTAL: $14.61\nTAX (6.00%): $0.88\nTOTAL AMOUNT: $15.49\nPayment Method: VISA ending in 9021\nAuth Code: 049821 | Status: APPROVED\nTrans ID: TXN-20260828-99410\n****************************************\nThank you for shopping synthetic!\nRetain receipt for return within 30 days\n****************************************",
+      "words": [
+        {
+          "word": "QUICK-MART",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 74.1,
+            "top": 26.13,
+            "x1": 140.1,
+            "bottom": 37.13
+          }
+        },
+        {
+          "word": "RETAIL",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 146.7,
+            "top": 26.13,
+            "x1": 186.3,
+            "bottom": 37.13
+          }
+        },
+        {
+          "word": "#1042",
+          "confidence": 0.79,
+          "source": "ocr",
+          "bbox": {
+            "x0": 192.9,
+            "top": 26.13,
+            "x1": 225.9,
+            "bottom": 37.13
+          }
+        },
+        {
+          "word": "742",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 68.4,
+            "top": 39.55,
+            "x1": 82.8,
+            "bottom": 47.55
+          }
+        },
+        {
+          "word": "Evergreen",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 87.6,
+            "top": 39.55,
+            "x1": 130.8,
+            "bottom": 47.55
+          }
+        },
+        {
+          "word": "Terrace,",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 135.6,
+            "top": 39.55,
+            "x1": 174.0,
+            "bottom": 47.55
+          }
+        },
+        {
+          "word": "Springfield",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 178.8,
+            "top": 39.55,
+            "x1": 231.6,
+            "bottom": 47.55
+          }
+        },
+        {
+          "word": "Terminal:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 80.4,
+            "top": 50.05,
+            "x1": 123.6,
+            "bottom": 58.05
+          }
+        },
+        {
+          "word": "T-09",
+          "confidence": 0.79,
+          "source": "ocr",
+          "bbox": {
+            "x0": 128.4,
+            "top": 50.05,
+            "x1": 147.6,
+            "bottom": 58.05
+          }
+        },
+        {
+          "word": "|",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 152.4,
+            "top": 50.05,
+            "x1": 157.2,
+            "bottom": 58.05
+          }
+        },
+        {
+          "word": "Cashier:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 162.0,
+            "top": 50.05,
+            "x1": 200.4,
+            "bottom": 58.05
+          }
+        },
+        {
+          "word": "#48",
+          "confidence": 0.81,
+          "source": "ocr",
+          "bbox": {
+            "x0": 205.2,
+            "top": 50.05,
+            "x1": 219.6,
+            "bottom": 58.05
+          }
+        },
+        {
+          "word": "Store",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 85.2,
+            "top": 60.55,
+            "x1": 109.2,
+            "bottom": 68.55
+          }
+        },
+        {
+          "word": "Phone:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 114.0,
+            "top": 60.55,
+            "x1": 142.8,
+            "bottom": 68.55
+          }
+        },
+        {
+          "word": "(555)",
+          "confidence": 0.81,
+          "source": "ocr",
+          "bbox": {
+            "x0": 147.6,
+            "top": 60.55,
+            "x1": 171.6,
+            "bottom": 68.55
+          }
+        },
+        {
+          "word": "019-2834",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 176.4,
+            "top": 60.55,
+            "x1": 214.8,
+            "bottom": 68.55
+          }
+        },
+        {
+          "word": "----------------------------------------",
+          "confidence": 0.72,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 77.15,
+            "x1": 228.0,
+            "bottom": 85.65
+          }
+        },
+        {
+          "word": "Item",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 88.65,
+            "x1": 44.4,
+            "bottom": 97.15
+          }
+        },
+        {
+          "word": "1:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 49.5,
+            "top": 88.65,
+            "x1": 59.7,
+            "bottom": 97.15
+          }
+        },
+        {
+          "word": "Organic",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 64.8,
+            "top": 88.65,
+            "x1": 100.5,
+            "bottom": 97.15
+          }
+        },
+        {
+          "word": "Granola",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 105.6,
+            "top": 88.65,
+            "x1": 141.3,
+            "bottom": 97.15
+          }
+        },
+        {
+          "word": "Bar",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 146.4,
+            "top": 88.65,
+            "x1": 161.7,
+            "bottom": 97.15
+          }
+        },
+        {
+          "word": "$2.99",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 166.8,
+            "top": 88.65,
+            "x1": 192.3,
+            "bottom": 97.15
+          }
+        },
+        {
+          "word": "Item",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 100.15,
+            "x1": 44.4,
+            "bottom": 108.65
+          }
+        },
+        {
+          "word": "2:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 49.5,
+            "top": 100.15,
+            "x1": 59.7,
+            "bottom": 108.65
+          }
+        },
+        {
+          "word": "Spring",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 64.8,
+            "top": 100.15,
+            "x1": 95.4,
+            "bottom": 108.65
+          }
+        },
+        {
+          "word": "Mineral",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 100.5,
+            "top": 100.15,
+            "x1": 136.2,
+            "bottom": 108.65
+          }
+        },
+        {
+          "word": "Water",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 141.3,
+            "top": 100.15,
+            "x1": 166.8,
+            "bottom": 108.65
+          }
+        },
+        {
+          "word": "$1.89",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 171.9,
+            "top": 100.15,
+            "x1": 197.4,
+            "bottom": 108.65
+          }
+        },
+        {
+          "word": "Item",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 111.65,
+            "x1": 44.4,
+            "bottom": 120.15
+          }
+        },
+        {
+          "word": "3:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 49.5,
+            "top": 111.65,
+            "x1": 59.7,
+            "bottom": 120.15
+          }
+        },
+        {
+          "word": "Recycled",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 64.8,
+            "top": 111.65,
+            "x1": 105.6,
+            "bottom": 120.15
+          }
+        },
+        {
+          "word": "Paper",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 110.7,
+            "top": 111.65,
+            "x1": 136.2,
+            "bottom": 120.15
+          }
+        },
+        {
+          "word": "Towels",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 141.3,
+            "top": 111.65,
+            "x1": 171.9,
+            "bottom": 120.15
+          }
+        },
+        {
+          "word": "$3.49",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 177.0,
+            "top": 111.65,
+            "x1": 202.5,
+            "bottom": 120.15
+          }
+        },
+        {
+          "word": "Item",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 123.15,
+            "x1": 44.4,
+            "bottom": 131.65
+          }
+        },
+        {
+          "word": "4:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 49.5,
+            "top": 123.15,
+            "x1": 59.7,
+            "bottom": 131.65
+          }
+        },
+        {
+          "word": "Ballpoint",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 64.8,
+            "top": 123.15,
+            "x1": 110.7,
+            "bottom": 131.65
+          }
+        },
+        {
+          "word": "Pen",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 115.8,
+            "top": 123.15,
+            "x1": 131.1,
+            "bottom": 131.65
+          }
+        },
+        {
+          "word": "Pack",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 136.2,
+            "top": 123.15,
+            "x1": 156.6,
+            "bottom": 131.65
+          }
+        },
+        {
+          "word": "(3ct)",
+          "confidence": 0.79,
+          "source": "ocr",
+          "bbox": {
+            "x0": 161.7,
+            "top": 123.15,
+            "x1": 187.2,
+            "bottom": 131.65
+          }
+        },
+        {
+          "word": "$4.25",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 192.3,
+            "top": 123.15,
+            "x1": 217.8,
+            "bottom": 131.65
+          }
+        },
+        {
+          "word": "Item",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 134.65,
+            "x1": 44.4,
+            "bottom": 143.15
+          }
+        },
+        {
+          "word": "5:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 49.5,
+            "top": 134.65,
+            "x1": 59.7,
+            "bottom": 143.15
+          }
+        },
+        {
+          "word": "Almond",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 64.8,
+            "top": 134.65,
+            "x1": 95.4,
+            "bottom": 143.15
+          }
+        },
+        {
+          "word": "Snack",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 100.5,
+            "top": 134.65,
+            "x1": 126.0,
+            "bottom": 143.15
+          }
+        },
+        {
+          "word": "Pack",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 131.1,
+            "top": 134.65,
+            "x1": 151.5,
+            "bottom": 143.15
+          }
+        },
+        {
+          "word": "$1.99",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 156.6,
+            "top": 134.65,
+            "x1": 182.1,
+            "bottom": 143.15
+          }
+        },
+        {
+          "word": "----------------------------------------",
+          "confidence": 0.72,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 146.15,
+            "x1": 228.0,
+            "bottom": 154.65
+          }
+        },
+        {
+          "word": "SUBTOTAL:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 157.65,
+            "x1": 69.9,
+            "bottom": 166.15
+          }
+        },
+        {
+          "word": "$14.61",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 75.0,
+            "top": 157.65,
+            "x1": 105.6,
+            "bottom": 166.15
+          }
+        },
+        {
+          "word": "TAX",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 169.15,
+            "x1": 39.3,
+            "bottom": 177.65
+          }
+        },
+        {
+          "word": "(6.00%):",
+          "confidence": 0.81,
+          "source": "ocr",
+          "bbox": {
+            "x0": 44.4,
+            "top": 169.15,
+            "x1": 85.2,
+            "bottom": 177.65
+          }
+        },
+        {
+          "word": "$0.88",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 90.3,
+            "top": 169.15,
+            "x1": 115.8,
+            "bottom": 177.65
+          }
+        },
+        {
+          "word": "TOTAL",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 180.65,
+            "x1": 49.5,
+            "bottom": 189.15
+          }
+        },
+        {
+          "word": "AMOUNT:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 54.6,
+            "top": 180.65,
+            "x1": 90.3,
+            "bottom": 189.15
+          }
+        },
+        {
+          "word": "$15.49",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 95.4,
+            "top": 180.65,
+            "x1": 126.0,
+            "bottom": 189.15
+          }
+        },
+        {
+          "word": "Payment",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 198.15,
+            "x1": 59.7,
+            "bottom": 206.65
+          }
+        },
+        {
+          "word": "Method:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 64.8,
+            "top": 198.15,
+            "x1": 100.5,
+            "bottom": 206.65
+          }
+        },
+        {
+          "word": "VISA",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 105.6,
+            "top": 198.15,
+            "x1": 126.0,
+            "bottom": 206.65
+          }
+        },
+        {
+          "word": "ending",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 131.1,
+            "top": 198.15,
+            "x1": 161.7,
+            "bottom": 206.65
+          }
+        },
+        {
+          "word": "in",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 166.8,
+            "top": 198.15,
+            "x1": 177.0,
+            "bottom": 206.65
+          }
+        },
+        {
+          "word": "9021",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 182.1,
+            "top": 198.15,
+            "x1": 202.5,
+            "bottom": 206.65
+          }
+        },
+        {
+          "word": "Auth",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 209.65,
+            "x1": 44.4,
+            "bottom": 218.15
+          }
+        },
+        {
+          "word": "Code:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 49.5,
+            "top": 209.65,
+            "x1": 75.0,
+            "bottom": 218.15
+          }
+        },
+        {
+          "word": "049821",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 80.1,
+            "top": 209.65,
+            "x1": 110.7,
+            "bottom": 218.15
+          }
+        },
+        {
+          "word": "|",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 115.8,
+            "top": 209.65,
+            "x1": 120.9,
+            "bottom": 218.15
+          }
+        },
+        {
+          "word": "Status:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 126.0,
+            "top": 209.65,
+            "x1": 161.7,
+            "bottom": 218.15
+          }
+        },
+        {
+          "word": "APPROVED",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 166.8,
+            "top": 209.65,
+            "x1": 207.6,
+            "bottom": 218.15
+          }
+        },
+        {
+          "word": "Trans",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 24.0,
+            "top": 221.15,
+            "x1": 49.5,
+            "bottom": 229.65
+          }
+        },
+        {
+          "word": "ID:",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 54.6,
+            "top": 221.15,
+            "x1": 69.9,
+            "bottom": 229.65
+          }
+        },
+        {
+          "word": "TXN-20260828-99410",
+          "confidence": 0.79,
+          "source": "ocr",
+          "bbox": {
+            "x0": 75.0,
+            "top": 221.15,
+            "x1": 166.8,
+            "bottom": 229.65
+          }
+        },
+        {
+          "word": "****************************************",
+          "confidence": 0.72,
+          "source": "ocr",
+          "bbox": {
+            "x0": 54.0,
+            "top": 240.55,
+            "x1": 246.0,
+            "bottom": 248.55
+          }
+        },
+        {
+          "word": "Thank",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 70.8,
+            "top": 251.05,
+            "x1": 94.8,
+            "bottom": 259.05
+          }
+        },
+        {
+          "word": "you",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 99.6,
+            "top": 251.05,
+            "x1": 114.0,
+            "bottom": 259.05
+          }
+        },
+        {
+          "word": "for",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 118.8,
+            "top": 251.05,
+            "x1": 133.2,
+            "bottom": 259.05
+          }
+        },
+        {
+          "word": "shopping",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 138.0,
+            "top": 251.05,
+            "x1": 176.4,
+            "bottom": 259.05
+          }
+        },
+        {
+          "word": "synthetic!",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 181.2,
+            "top": 251.05,
+            "x1": 229.2,
+            "bottom": 259.05
+          }
+        },
+        {
+          "word": "Retain",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 54.0,
+            "top": 261.55,
+            "x1": 82.8,
+            "bottom": 269.55
+          }
+        },
+        {
+          "word": "receipt",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 87.6,
+            "top": 261.55,
+            "x1": 121.2,
+            "bottom": 269.55
+          }
+        },
+        {
+          "word": "for",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 126.0,
+            "top": 261.55,
+            "x1": 140.4,
+            "bottom": 269.55
+          }
+        },
+        {
+          "word": "return",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 145.2,
+            "top": 261.55,
+            "x1": 174.0,
+            "bottom": 269.55
+          }
+        },
+        {
+          "word": "within",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 178.8,
+            "top": 261.55,
+            "x1": 207.6,
+            "bottom": 269.55
+          }
+        },
+        {
+          "word": "30",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 212.4,
+            "top": 261.55,
+            "x1": 222.0,
+            "bottom": 269.55
+          }
+        },
+        {
+          "word": "days",
+          "confidence": 0.98,
+          "source": "ocr",
+          "bbox": {
+            "x0": 226.8,
+            "top": 261.55,
+            "x1": 246.0,
+            "bottom": 269.55
+          }
+        },
+        {
+          "word": "****************************************",
+          "confidence": 0.72,
+          "source": "ocr",
+          "bbox": {
+            "x0": 54.0,
+            "top": 272.05,
+            "x1": 246.0,
+            "bottom": 280.05
+          }
+        }
+      ]
     }
   ],
-  "low_confidence_words": []
+  "low_confidence_words": [
+    {
+      "word": "#1042",
+      "confidence": 0.79,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 192.9,
+        "top": 26.13,
+        "x1": 225.9,
+        "bottom": 37.13
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "T-09",
+      "confidence": 0.79,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 128.4,
+        "top": 50.05,
+        "x1": 147.6,
+        "bottom": 58.05
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "#48",
+      "confidence": 0.81,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 205.2,
+        "top": 50.05,
+        "x1": 219.6,
+        "bottom": 58.05
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "(555)",
+      "confidence": 0.81,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 147.6,
+        "top": 60.55,
+        "x1": 171.6,
+        "bottom": 68.55
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "----------------------------------------",
+      "confidence": 0.72,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 24.0,
+        "top": 77.15,
+        "x1": 228.0,
+        "bottom": 85.65
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "(3ct)",
+      "confidence": 0.79,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 161.7,
+        "top": 123.15,
+        "x1": 187.2,
+        "bottom": 131.65
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "----------------------------------------",
+      "confidence": 0.72,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 24.0,
+        "top": 146.15,
+        "x1": 228.0,
+        "bottom": 154.65
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "(6.00%):",
+      "confidence": 0.81,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 44.4,
+        "top": 169.15,
+        "x1": 85.2,
+        "bottom": 177.65
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "TXN-20260828-99410",
+      "confidence": 0.79,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 75.0,
+        "top": 221.15,
+        "x1": 166.8,
+        "bottom": 229.65
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "****************************************",
+      "confidence": 0.72,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 54.0,
+        "top": 240.55,
+        "x1": 246.0,
+        "bottom": 248.55
+      },
+      "reason": "ocr_uncertainty"
+    },
+    {
+      "word": "****************************************",
+      "confidence": 0.72,
+      "page": 1,
+      "source": "ocr",
+      "bbox": {
+        "x0": 54.0,
+        "top": 272.05,
+        "x1": 246.0,
+        "bottom": 280.05
+      },
+      "reason": "ocr_uncertainty"
+    }
+  ]
 }

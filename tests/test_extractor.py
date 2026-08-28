@@ -165,7 +165,26 @@ class TestPDFConfidenceExtractor:
         assert "Word-Level Confidence Reviewer" in content
         assert "sample_digital_invoice.pdf" in content
         assert "thresholdSlider" in content
+        assert "thresholdNumberInput" in content
+        assert "btnFilterAll" in content
+        assert "btnFilterLow" in content
+        assert "btnFilterCorrected" in content
         assert "themeToggleBtn" in content
+
+        # Verify embedded JavaScript syntax validity with node if available
+        import re
+        script_match = re.search(r"<script>(.*?)</script>", content, flags=re.DOTALL)
+        assert script_match is not None
+        js_code = script_match.group(1)
+        # Ensure no invalid unescaped newlines in JSON strings
+        assert "/* __DATA_PAYLOAD_START__ */" in js_code
+
+        node_check = subprocess.run(
+            ["node", "-e", f"new Function({json.dumps(js_code)})"],
+            capture_output=True,
+            text=True
+        )
+        assert node_check.returncode == 0, f"Embedded JS syntax error: {node_check.stderr}"
 
     def test_cli_execution_with_html_output(self, tmp_path):
         input_pdf = SAMPLES_DIR / "sample_digital_invoice.pdf"

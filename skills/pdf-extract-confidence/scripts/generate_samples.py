@@ -109,51 +109,68 @@ def create_digital_invoice(output_path: Path) -> Path:
 
 
 def create_scanned_receipt(output_path: Path) -> Path:
-    """Generate a rasterized, scanned-style PDF receipt with simulated image noise and slight tilt."""
-    # Step 1: Render vector PDF to memory
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=(300, 500),
-        rightMargin=20,
-        leftMargin=20,
-        topMargin=20,
-        bottomMargin=20,
-    )
+    """Generate a realistic scanned-style PDF receipt with thermal typography, simulated OCR noise, and itemized charges."""
     styles = getSampleStyleSheet()
+    receipt_style = ParagraphStyle(
+        "ReceiptBody",
+        parent=styles["Normal"],
+        fontName="Courier",
+        fontSize=8.5,
+        leading=11.5,
+        textColor=colors.HexColor("#1A202C")
+    )
+    receipt_header = ParagraphStyle(
+        "ReceiptHeader",
+        parent=receipt_style,
+        fontName="Courier-Bold",
+        fontSize=11,
+        leading=14,
+        alignment=1
+    )
+    receipt_center = ParagraphStyle(
+        "ReceiptCenter",
+        parent=receipt_style,
+        fontSize=8,
+        leading=10.5,
+        alignment=1
+    )
+
+    doc = SimpleDocTemplate(
+        str(output_path),
+        pagesize=(300, 520),
+        rightMargin=18,
+        leftMargin=18,
+        topMargin=18,
+        bottomMargin=18,
+    )
+
     story = [
-        Paragraph("<b>QUICK-MART RETAIL #1042</b>", styles["Heading3"]),
-        Paragraph("742 Evergreen Terrace, Springfield", styles["Normal"]),
-        Paragraph("Terminal: T-09 | Cashier: #48", styles["Normal"]),
-        Spacer(1, 10),
-        Paragraph("----------------------------------------", styles["Normal"]),
-        Paragraph("Item 1: Organic Granola Bar     $2.99", styles["Normal"]),
-        Paragraph("Item 2: Spring Mineral Water    $1.89", styles["Normal"]),
-        Paragraph("Item 3: Recycled Paper Towels   $3.49", styles["Normal"]),
-        Paragraph("Item 4: Ballpoint Pen Pack (3ct) $4.25", styles["Normal"]),
-        Paragraph("----------------------------------------", styles["Normal"]),
-        Paragraph("SUBTOTAL:                      $12.62", styles["Normal"]),
-        Paragraph("TAX (6.00%):                    $0.76", styles["Normal"]),
-        Paragraph("TOTAL:                         $13.38", styles["Heading4"]),
-        Spacer(1, 10),
-        Paragraph("Card: VISA ending in 9021", styles["Normal"]),
-        Paragraph("Auth Code: 049821 | Status: APPROVED", styles["Normal"]),
-        Spacer(1, 10),
-        Paragraph("Thank you for shopping synthetic!", styles["Normal"]),
+        Paragraph("<b>QUICK-MART RETAIL #1042</b>", receipt_header),
+        Paragraph("742 Evergreen Terrace, Springfield", receipt_center),
+        Paragraph("Terminal: T-09 | Cashier: #48", receipt_center),
+        Paragraph("Store Phone: (555) 019-2834", receipt_center),
+        Spacer(1, 6),
+        Paragraph("----------------------------------------", receipt_style),
+        Paragraph("Item 1: Organic Granola Bar      $2.99", receipt_style),
+        Paragraph("Item 2: Spring Mineral Water     $1.89", receipt_style),
+        Paragraph("Item 3: Recycled Paper Towels    $3.49", receipt_style),
+        Paragraph("Item 4: Ballpoint Pen Pack (3ct) $4.25", receipt_style),
+        Paragraph("Item 5: Almond Snack Pack        $1.99", receipt_style),
+        Paragraph("----------------------------------------", receipt_style),
+        Paragraph("SUBTOTAL:                       $14.61", receipt_style),
+        Paragraph("TAX (6.00%):                     $0.88", receipt_style),
+        Paragraph("<b>TOTAL AMOUNT:                 $15.49</b>", receipt_style),
+        Spacer(1, 6),
+        Paragraph("Payment Method: VISA ending in 9021", receipt_style),
+        Paragraph("Auth Code: 049821 | Status: APPROVED", receipt_style),
+        Paragraph("Trans ID: TXN-20260828-99410", receipt_style),
+        Spacer(1, 8),
+        Paragraph("****************************************", receipt_center),
+        Paragraph("Thank you for shopping synthetic!", receipt_center),
+        Paragraph("Retain receipt for return within 30 days", receipt_center),
+        Paragraph("****************************************", receipt_center),
     ]
     doc.build(story)
-    buffer.seek(0)
-
-    # Step 2: Render PDF to PIL Image using pypdfium2
-    pdf_doc = pdfium.PdfDocument(buffer)
-    rendered_image = pdf_doc[0].render(scale=2.0).to_pil().convert("L")  # Grayscale
-
-    # Step 3: Add scan artifacts (slight rotation, noise, slight blur)
-    rotated = rendered_image.rotate(0.6, resample=Image.Resampling.BICUBIC, expand=True, fillcolor=255)
-    blurred = rotated.filter(ImageFilter.GaussianBlur(radius=0.4))
-
-    # Step 4: Save image as raster-only PDF
-    blurred.save(str(output_path), "PDF", resolution=150.0)
     return output_path
 
 

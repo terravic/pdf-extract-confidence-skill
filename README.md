@@ -244,41 +244,47 @@ The UI Dashboard (`skills/pdf-extract-confidence/ui/index.html`) is a responsive
 
 1. **Visual Document Page & Bounding Box View (Left Pane)**:
    - Displays the rendered PDF page geometry with standard point coordinate scaling.
-   - Overlays bounding boxes for every extracted word token.
-   - Highlights words in real-time based on the confidence threshold:
-     - Amber/Red outline: Word confidence is strictly below the cutoff threshold.
-     - Subtle Green outline: Word confidence meets or exceeds the threshold.
-     - Solid Blue outline: Currently selected word token.
+   - Overlays interactive bounding boxes for every extracted word token:
+     - **Red/Amber outline**: Word confidence is strictly below the global cutoff threshold.
+     - **Subtle Green outline**: Word confidence meets or exceeds the cutoff threshold.
+     - **Purple outline**: Word has been manually edited and verified by a human reviewer.
+     - **Solid Blue outline with glow**: Currently selected word token.
    - Clicking any bounding box on the page automatically selects the word, scrolls to it in the text flow, and opens the Human-in-the-Loop editor.
 
-2. **Confidence Cutoff Threshold Slider**:
-   - Live range slider spanning from `0.50` (50%) to `1.00` (100%).
-   - Adjusting the slider instantly updates:
-     - The numerical percentage badge.
+2. **Global Cutoff Threshold Slider & Number Input**:
+   - Continuous range slider linked two-way to an editable number input field (range: `0.00` to `1.00`).
+   - Adjusting either the slider or the number field instantly updates:
+     - The global threshold value and percentage badge.
      - Highlight colors on the visual document view.
-     - Low-confidence badge counts in the header metrics strip.
+     - Low-confidence badge counts and filter button counters.
      - The populated items in the Audit Review Queue.
 
-3. **Human-in-the-Loop Word Editor (Right Pane)**:
+3. **Active View Filter Buttons**:
+   - **All Words**: Displays all extracted word tokens on both the document sheet and the text stream.
+   - **Low Confidence Only**: Dims high-confidence text to a subtle background watermark while highlighting all sub-threshold tokens with bright red bounding boxes, and filters the text stream to show only low-confidence tokens.
+   - **Corrected Only**: Dims uncorrected text while spotlighting human-corrected tokens in purple, and filters the text stream to show only verified tokens.
+
+4. **Human-in-the-Loop Word Editor (Right Pane)**:
    - When a word is selected, the inspector displays:
      - Word Text
-     - Confidence Score
-     - Extraction Source (`digital` vs `ocr`)
-     - Page Number and Bounding Box coordinates (`x0`, `top`, `x1`, `bottom`)
+     - Confidence Score with an animated visual meter bar
+     - Extraction Source (`digital` vs `ocr` vs `human_corrected`)
+     - Page Number and exact Bounding Box coordinates (`x0`, `top`, `x1`, `bottom`)
    - Manual Correction Field: Reviewers can edit the word text directly and click **Apply** (or press Enter).
    - Once corrected, the word is updated in the active data structure, its confidence is elevated to `1.0`, and the token is flagged as `human_corrected: true`.
    - Reviewers can also click **Approve** to accept a low-confidence word as-is without modifying its text.
+   - Quick Navigation Buttons: Cycle through low-confidence issues across pages with **[< Prev Issue]** and **[Next Issue >]**.
 
-4. **Audit Review Queue (Tab 2)**:
-   - A dedicated table enumerating all tokens currently scoring below the active threshold slider.
+5. **Audit Review Queue (Tab 2)**:
+   - A dedicated table enumerating all tokens currently scoring below the active threshold.
    - Displays word text, confidence score, and page number.
    - Clicking **Inspect** on any row jumps directly to that page and focuses the bounding box.
 
-5. **Light and Dark Theme Toggle**:
+6. **Light and Dark Theme Toggle**:
    - Click the theme toggle button in the header (`[Dark Mode]` / `[Light Mode]`) to switch themes.
    - Uses tailored CSS color tokens and persists the selected preference in `localStorage`.
 
-6. **Import and Export**:
+7. **Import and Export**:
    - **Load JSON**: Open any existing extraction JSON file via the file picker.
    - **View JSON**: View the formatted JSON in an interactive modal with a single-click copy to clipboard button.
    - **Export Corrected JSON**: Download the updated JSON file containing all manual edits, updated word counts, and modified confidence metrics.

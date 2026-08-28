@@ -1,0 +1,83 @@
+{
+  "metadata": {
+    "filename": "sample_digital_invoice.pdf",
+    "total_pages": 1,
+    "extraction_engine": "hybrid_extractor",
+    "timestamp_utc": "2026-08-28T12:00:00.000000+00:00",
+    "total_words": 116,
+    "mean_confidence": 1.0,
+    "min_confidence": 1.0,
+    "low_confidence_count": 0,
+    "low_confidence_threshold": 0.85
+  },
+  "full_text": "APEX LOGISTICS & CLOUD SERVICES\n100 Enterprise Boulevard, Suite 400 | Metro City, NY 10001\nBilling Inquiries: billing@apexlogistics-synthetic.example.com\nInvoice Number: INV-2026-8841 Invoice Date: 2026-08-28\nCustomer ID: CUST-9921-X Payment Due: 2026-09-28\nPurchase Order: PO-771029 Currency: USD ($)\nItemized Charges\nDescription Qty Unit Price ($) Total Amount ($)\nCloud Storage Infrastructure - Tier 2 (TB/Month) 25 12.00 300.00\nEnterprise API Gateway Throughput Units 50 4.50 225.00\nAutomated Security Compliance Auditing Module 1 450.00 450.00\nTechnical Support & SLA Maintenance (Silver) 1 175.00 175.00\nSubtotal: 1,150.00\nState Tax (8.25%): 94.88\nTotal Balance Due: 1,244.88\nPayment Instructions:\nPlease remit payments via Automated Clearing House (ACH) or Wire Transfer to Apex Logistics Treasury\nAccount within 30 days of the invoice date.",
+  "pages": [
+    {
+      "page_number": 1,
+      "page_type": "digital",
+      "width": 612.0,
+      "height": 792.0,
+      "word_count": 116,
+      "mean_confidence": 1.0,
+      "text": "APEX LOGISTICS & CLOUD SERVICES\n100 Enterprise Boulevard, Suite 400 | Metro City, NY 10001\nBilling Inquiries: billing@apexlogistics-synthetic.example.com\nInvoice Number: INV-2026-8841 Invoice Date: 2026-08-28\nCustomer ID: CUST-9921-X Payment Due: 2026-09-28\nPurchase Order: PO-771029 Currency: USD ($)\nItemized Charges\nDescription Qty Unit Price ($) Total Amount ($)\nCloud Storage Infrastructure - Tier 2 (TB/Month) 25 12.00 300.00\nEnterprise API Gateway Throughput Units 50 4.50 225.00\nAutomated Security Compliance Auditing Module 1 450.00 450.00\nTechnical Support & SLA Maintenance (Silver) 1 175.00 175.00\nSubtotal: 1,150.00\nState Tax (8.25%): 94.88\nTotal Balance Due: 1,244.88\nPayment Instructions:\nPlease remit payments via Automated Clearing House (ACH) or Wire Transfer to Apex Logistics Treasury\nAccount within 30 days of the invoice date.",
+      "words": [
+        {
+          "word": "APEX",
+          "confidence": 1.0,
+          "source": "digital",
+          "bbox": {
+            "x0": 60.0,
+            "top": 64.14,
+            "x1": 114.46,
+            "bottom": 84.14
+          }
+        },
+        {
+          "word": "LOGISTICS",
+          "confidence": 1.0,
+          "source": "digital",
+          "bbox": {
+            "x0": 120.02,
+            "top": 64.14,
+            "x1": 227.82,
+            "bottom": 84.14
+          }
+        },
+        {
+          "word": "&",
+          "confidence": 1.0,
+          "source": "digital",
+          "bbox": {
+            "x0": 233.38,
+            "top": 64.14,
+            "x1": 247.82,
+            "bottom": 84.14
+          }
+        },
+        {
+          "word": "CLOUD",
+          "confidence": 1.0,
+          "source": "digital",
+          "bbox": {
+            "x0": 253.38,
+            "top": 64.14,
+            "x1": 324.48,
+            "bottom": 84.14
+          }
+        },
+        {
+          "word": "SERVICES",
+          "confidence": 1.0,
+          "source": "digital",
+          "bbox": {
+            "x0": 330.04,
+            "top": 64.14,
+            "x1": 431.18,
+            "bottom": 84.14
+          }
+        }
+      ]
+    }
+  ],
+  "low_confidence_words": []
+}

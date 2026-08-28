@@ -1,0 +1,8 @@
+pdfplumber>=0.11.0
+pypdf>=5.0.0
+pypdfium2>=4.30.0
+pdfminer.six>=20231228
+reportlab>=4.0.0
+Pillow>=10.0.0
+pytest>=8.0.0
+jsonschema>=4.20.0

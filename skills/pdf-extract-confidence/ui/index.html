@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Word-Level Confidence Visualizer & HITL Reviewer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-brand">
+      <h1 class="header-title">PDF Extraction & Confidence Reviewer</h1>
+      <p class="header-subtitle">Visual Document Inspector & Human-in-the-Loop Correction Dashboard</p>
+    </div>
+    <div class="header-controls">
+      <input type="file" id="fileInput" accept=".json" style="display: none;">
+      <button class="btn btn-sm" onclick="document.getElementById('fileInput').click()">Load JSON</button>
+      <button class="btn btn-sm" id="viewJsonBtn">View JSON</button>
+      <button class="btn btn-sm btn-primary" id="exportJsonBtn">Export Corrected JSON</button>
+      <button class="btn btn-sm theme-toggle-btn" id="themeToggleBtn">[Dark Mode]</button>
+    </div>
+  </header>
+
+  <!-- Interactive Control Strip -->
+  <section class="control-bar">
+    <div class="slider-group">
+      <label for="thresholdSlider" class="slider-label">Confidence Cutoff Threshold:</label>
+      <input type="range" id="thresholdSlider" class="threshold-slider" min="0.50" max="1.00" step="0.01" value="0.85">
+      <span class="threshold-badge" id="thresholdValBadge">85%</span>
+    </div>
+
+    <div class="metrics-strip">
+      <div class="metric-item">
+        <span class="metric-label">Document</span>
+        <span class="metric-value" id="metricFilename">sample_digital_invoice.pdf</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Total Words</span>
+        <span class="metric-value" id="metricTotalWords">32</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Mean Confidence</span>
+        <span class="metric-value metric-badge-high" id="metricMeanConf">94.2%</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Low Confidence</span>
+        <span class="metric-value metric-badge-low" id="metricLowConf">3</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Corrected</span>
+        <span class="metric-value" id="metricCorrections">0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Split Content Area -->
+  <main class="main-container">
+
+    <!-- Left Pane: Visual Document Viewer -->
+    <section class="pane-visual">
+      <div class="pane-header">
+        <span class="pane-title">Visual Document View & Bounding Boxes</span>
+        <div class="page-navigation">
+          <button class="btn btn-sm" id="prevPageBtn">Previous Page</button>
+          <span class="page-indicator" id="pageIndicator">Page 1 of 1</span>
+          <button class="btn btn-sm" id="nextPageBtn">Next Page</button>
+        </div>
+      </div>
+      <div class="visual-viewport" id="visualViewport">
+        <div class="document-page-wrapper" id="docWrapper">
+          <canvas id="pageCanvas" class="document-page-canvas"></canvas>
+          <div class="overlay-layer" id="overlayLayer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Pane: Text Inspector & Audit Queue -->
+    <section class="pane-inspector">
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="tabText">Document Text</button>
+        <button class="tab-btn" data-tab="tabAudit">Audit Queue</button>
+      </nav>
+
+      <!-- Tab 1: Text View & Word Inspector -->
+      <div class="tab-content active" id="tabText">
+        
+        <!-- HITL Word Inspector Card -->
+        <div class="inspector-card" id="inspectorCard" style="display: none;">
+          <div class="inspector-card-title">Word Inspection & Correction</div>
+          <div class="inspector-row">
+            <span class="inspector-key">Current Token:</span>
+            <span class="inspector-val" id="inspWord">-</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Confidence Score:</span>
+            <span class="inspector-val" id="inspConf">-</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Extraction Source:</span>
+            <span class="inspector-val" id="inspSource">-</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Page & Bounding Box:</span>
+            <span class="inspector-val" id="inspBBox">-</span>
+          </div>
+          <div class="edit-input-group">
+            <input type="text" class="edit-input" id="inspEditInput" placeholder="Enter manual correction...">
+            <button class="btn btn-sm btn-primary" id="applyCorrectionBtn">Apply</button>
+            <button class="btn btn-sm" id="approveAsIsBtn">Approve</button>
+          </div>
+        </div>
+
+        <div class="empty-state" id="inspectorEmpty">
+          <p class="empty-state-title">No Word Selected</p>
+          <p>Click on any word on the left PDF view or from the text below to inspect coordinates and edit text.</p>
+        </div>
+
+        <div class="text-stream-container">
+          <div class="inspector-card-title">Extracted Text Stream</div>
+          <div class="word-token-flow" id="textStreamFlow"></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Audit Review Queue -->
+      <div class="tab-content" id="tabAudit">
+        <div class="inspector-card-title">Low Confidence Review Items</div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+          Words currently scoring below the selected threshold cutoff. Click any row to inspect and correct on the PDF page.
+        </p>
+
+        <div class="empty-state" id="auditEmptyState" style="display: none;">
+          <p class="empty-state-title">No Low Confidence Words</p>
+          <p>All extracted tokens on this document meet or exceed the selected threshold.</p>
+        </div>
+
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Word</th>
+              <th>Confidence</th>
+              <th>Page</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- View JSON Modal -->
+  <div class="modal-backdrop" id="jsonModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <span class="pane-title">Structured Output JSON</span>
+        <button class="btn btn-sm" id="closeModalBtn">Close</button>
+      </div>
+      <div class="modal-body">
+        <pre class="modal-code" id="modalJsonCode"></pre>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-primary" id="copyJsonBtn">Copy JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

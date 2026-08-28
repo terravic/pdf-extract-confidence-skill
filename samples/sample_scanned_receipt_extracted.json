@@ -1,0 +1,27 @@
+{
+  "metadata": {
+    "filename": "sample_scanned_receipt.pdf",
+    "total_pages": 1,
+    "extraction_engine": "hybrid_extractor",
+    "timestamp_utc": "2026-08-28T14:19:43.512496+00:00",
+    "total_words": 0,
+    "mean_confidence": 1.0,
+    "min_confidence": 1.0,
+    "low_confidence_count": 0,
+    "low_confidence_threshold": 0.85
+  },
+  "full_text": "[Scanned image content - OCR engine required for pixel recognition]",
+  "pages": [
+    {
+      "page_number": 1,
+      "page_type": "ocr",
+      "width": 293.76,
+      "height": 483.84,
+      "word_count": 0,
+      "mean_confidence": 1.0,
+      "text": "[Scanned image content - OCR engine required for pixel recognition]",
+      "words": []
+    }
+  ],
+  "low_confidence_words": []
+}

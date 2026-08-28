@@ -1,0 +1,87 @@
+import sys
+from pathlib import Path
+import pytest
+
+SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "skills" / "pdf-extract-confidence" / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from extract_pdf import (
+    PDFConfidenceExtractor,
+    validate_against_schema,
+)
+
+SAMPLES_DIR = Path(__file__).resolve().parent.parent / "samples"
+SCHEMA_PATH = Path(__file__).resolve().parent.parent / "skills" / "pdf-extract-confidence" / "resources" / "schema.json"
+
+
+class TestSchemaValidation:
+
+    def test_schema_file_exists(self):
+        assert SCHEMA_PATH.exists()
+
+    def test_valid_digital_output_passes_validation(self):
+        extractor = PDFConfidenceExtractor()
+        result = extractor.extract(SAMPLES_DIR / "sample_digital_invoice.pdf")
+        output_dict = result.to_dict()
+
+        is_valid, error = validate_against_schema(output_dict, SCHEMA_PATH)
+        assert is_valid, f"Validation failed: {error}"
+
+    def test_valid_mixed_output_passes_validation(self):
+        extractor = PDFConfidenceExtractor()
+        result = extractor.extract(SAMPLES_DIR / "sample_mixed_report.pdf")
+        output_dict = result.to_dict()
+
+        is_valid, error = validate_against_schema(output_dict, SCHEMA_PATH)
+        assert is_valid, f"Validation failed: {error}"
+
+    def test_invalid_structure_rejected(self):
+        # Missing required metadata
+        invalid_dict = {
+            "metadata": {},
+            "full_text": "Sample text",
+            "pages": [],
+            "low_confidence_words": [],
+        }
+        is_valid, error = validate_against_schema(invalid_dict, SCHEMA_PATH)
+        assert not is_valid
+        assert error is not None
+
+    def test_invalid_confidence_range_rejected(self):
+        valid_dict = {
+            "metadata": {
+                "filename": "test.pdf",
+                "total_pages": 1,
+                "extraction_engine": "test",
+                "timestamp_utc": "2026-08-28T12:00:00Z",
+                "total_words": 1,
+                "mean_confidence": 1.5,  # Out of range > 1.0
+                "min_confidence": 1.5,
+                "low_confidence_count": 0,
+                "low_confidence_threshold": 0.85,
+            },
+            "full_text": "word",
+            "pages": [
+                {
+                    "page_number": 1,
+                    "page_type": "digital",
+                    "width": 612.0,
+                    "height": 792.0,
+                    "word_count": 1,
+                    "mean_confidence": 1.5,
+                    "text": "word",
+                    "words": [
+                        {
+                            "word": "word",
+                            "confidence": 1.5,  # Out of range > 1.0
+                            "source": "digital",
+                            "bbox": {"x0": 0, "top": 0, "x1": 10, "bottom": 10},
+                        }
+                    ],
+                }
+            ],
+            "low_confidence_words": [],
+        }
+        is_valid, error = validate_against_schema(valid_dict, SCHEMA_PATH)
+        assert not is_valid

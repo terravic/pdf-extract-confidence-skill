@@ -194,13 +194,11 @@ class PDFConfidenceExtractor:
 
     def _find_tesseract(self) -> Optional[str]:
         """Locate Tesseract executable on the system path."""
-        for candidate in ["/usr/bin/tesseract", "/usr/local/bin/tesseract", "tesseract"]:
-            try:
-                res = subprocess.run([candidate, "--version"], capture_output=True, text=True)
-                if res.returncode == 0:
-                    return candidate
-            except Exception:
-                continue
+        import shutil
+        for candidate in ["tesseract", "tesseract-ocr"]:
+            found = shutil.which(candidate)
+            if found:
+                return found
         return None
 
     def evaluate_digital_word_confidence(self, word_text: str, is_ocr_source: bool = False) -> Tuple[float, str]:

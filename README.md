@@ -99,8 +99,10 @@ pdf-extract-confidence-skill/
 │   ├── sample_digital_invoice_dashboard.html
 │   ├── sample_mixed_report.pdf            # Synthetic mixed report (0% PHI)
 │   ├── sample_mixed_report_extracted.json
+│   ├── sample_mixed_report_dashboard.html
 │   ├── sample_scanned_receipt.pdf         # Synthetic raster scan (0% PHI)
-│   └── sample_scanned_receipt_extracted.json
+│   ├── sample_scanned_receipt_extracted.json
+│   └── sample_scanned_receipt_dashboard.html
 └── tests/
     ├── __init__.py
     ├── test_extractor.py                  # Unit, CLI, and Dashboard integration tests
@@ -243,13 +245,15 @@ The UI Dashboard (`skills/pdf-extract-confidence/ui/index.html`) is a responsive
 ### Features & Capabilities
 
 1. **Visual Document Page & Bounding Box View (Left Pane)**:
-   - Displays the rendered PDF page geometry with standard point coordinate scaling.
+   - Displays the rendered PDF page geometry with standard point coordinate scaling (72 points per inch).
+   - Supports digital vector invoices, multi-page reports, and scanned thermal receipts with adapted typography and document modality badges (`Digital Vector`, `Hybrid Multi-Page`, `Scanned OCR Receipt`).
    - Overlays interactive bounding boxes for every extracted word token:
      - **Red/Amber outline**: Word confidence is strictly below the global cutoff threshold.
      - **Subtle Green outline**: Word confidence meets or exceeds the cutoff threshold.
      - **Purple outline**: Word has been manually edited and verified by a human reviewer.
      - **Solid Blue outline with glow**: Currently selected word token.
-   - Clicking any bounding box on the page automatically selects the word, scrolls to it in the text flow, and opens the Human-in-the-Loop editor.
+   - Clicking any bounding box on the page automatically selects the word, focuses it in the Inspector, and highlights its position in the token stream.
+   - Includes zoom controls (`-`, `100%`, `+`, `Reset`) and multi-page stepper controls (`Previous Page`, `Next Page`).
 
 2. **Global Cutoff Threshold Slider & Number Input**:
    - Continuous range slider linked two-way to an editable number input field (range: `0.00` to `1.00`).
@@ -264,29 +268,30 @@ The UI Dashboard (`skills/pdf-extract-confidence/ui/index.html`) is a responsive
    - **Low Confidence Only**: Dims high-confidence text to a subtle background watermark while highlighting all sub-threshold tokens with bright red bounding boxes, and filters the text stream to show only low-confidence tokens.
    - **Corrected Only**: Dims uncorrected text while spotlighting human-corrected tokens in purple, and filters the text stream to show only verified tokens.
 
-4. **Human-in-the-Loop Word Editor (Right Pane)**:
-   - When a word is selected, the inspector displays:
-     - Word Text
-     - Confidence Score with an animated visual meter bar
-     - Extraction Source (`digital` vs `ocr` vs `human_corrected`)
-     - Page Number and exact Bounding Box coordinates (`x0`, `top`, `x1`, `bottom`)
-   - Manual Correction Field: Reviewers can edit the word text directly and click **Apply** (or press Enter).
-   - Once corrected, the word is updated in the active data structure, its confidence is elevated to `1.0`, and the token is flagged as `human_corrected: true`.
-   - Reviewers can also click **Approve** to accept a low-confidence word as-is without modifying its text.
-   - Quick Navigation Buttons: Cycle through low-confidence issues across pages with **[< Prev Issue]** and **[Next Issue >]**.
+4. **Right-Pane Tabbed Workspace**:
+   - **Tab 1: Document Text & Word Inspector**:
+     - Word Inspector card showing word text, animated confidence meter bar, extraction source (`digital` vs `ocr`), page number, and bounding box coordinates (`x0`, `top`, `x1`, `bottom`).
+     - Manual correction text field with **Apply** (Enter key) and **Approve** buttons.
+     - Quick navigation buttons to cycle through issues across pages with **[< Prev Issue]** and **[Next Issue >]**.
+     - Live interactive token flow stream with search filtering.
+   - **Tab 2: Full Plain Text**:
+     - Displays the continuous, consolidated plain text extracted from the entire PDF document across all pages.
+     - Includes a one-click **[Copy Text]** button for easy copying into external applications.
+   - **Tab 3: JSON Output**:
+     - Live formatted view of the extraction JSON adhering strictly to `schema.json`.
+     - Automatically updates in real time as corrections are made on the PDF document view.
+     - Includes dedicated **[Copy JSON]** and **[Download JSON]** buttons.
+   - **Tab 4: Audit Review Queue**:
+     - Enumerates all tokens currently scoring below the active cutoff threshold.
+     - Displays word text, confidence score badge, source, and page number with a one-click **[Inspect]** jump button.
 
-5. **Audit Review Queue (Tab 2)**:
-   - A dedicated table enumerating all tokens currently scoring below the active threshold.
-   - Displays word text, confidence score, and page number.
-   - Clicking **Inspect** on any row jumps directly to that page and focuses the bounding box.
+5. **Light and Dark Theme Toggle**:
+   - Theme toggle button in the header with Sun and Moon SVG icons (`[Dark Mode]` / `[Light Mode]`).
+   - Uses tailored CSS color tokens and persists user preference safely across sessions.
 
-6. **Light and Dark Theme Toggle**:
-   - Click the theme toggle button in the header (`[Dark Mode]` / `[Light Mode]`) to switch themes.
-   - Uses tailored CSS color tokens and persists the selected preference in `localStorage`.
-
-7. **Import and Export**:
-   - **Load JSON**: Open any existing extraction JSON file via the file picker.
-   - **View JSON**: View the formatted JSON in an interactive modal with a single-click copy to clipboard button.
+6. **Import and Export**:
+   - **Load JSON**: Open any existing extraction JSON file via the file picker to populate the entire dashboard.
+   - **View JSON**: View formatted JSON in an interactive modal with single-click clipboard copy.
    - **Export Corrected JSON**: Download the updated JSON file containing all manual edits, updated word counts, and modified confidence metrics.
 
 ---

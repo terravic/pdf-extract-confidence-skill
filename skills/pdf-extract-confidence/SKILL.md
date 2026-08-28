@@ -61,14 +61,13 @@ Key CLI flags:
 
 ### Step 4: Visual UI Dashboard Presentation
 
-When the user asks to visually review, verify, or correct words using a dashboard:
-1. Generate the standalone dashboard file by passing `--html-output <filename>_dashboard.html` or open the pre-packaged dashboard in `skills/pdf-extract-confidence/ui/index.html`.
+Always generate the standalone dashboard file by including `--html-output <basename>_dashboard.html` in Step 2:
+1. The script bundles the HTML markup, CSS stylesheet, and extracted JSON payload into a self-contained single-file HTML dashboard that works out-of-the-box in any browser or iframe without external network requests or file uploading.
 2. The interactive UI dashboard provides:
-   - Dynamic Confidence Threshold Slider: Sliding between 0.50 and 1.00 instantly updates word highlights across both the visual document and text views.
-   - Visual Page View with Bounding Boxes: Overlays bounding boxes on the rendered PDF page, color-coded by confidence (green for high confidence, amber/red for below threshold).
-   - Human-in-the-Loop Inspector: Click any word to inspect its confidence score, source, and coordinates, type a manual correction, and click "Apply" to update the word.
-   - Audit Queue Table: Lists all words below the active threshold with one-click jump-to-page inspection.
-   - Light and Dark Theme Toggle: Persists user preference via localStorage.
+   - Dynamic Confidence Threshold Slider & Number Input: Adjusting the threshold immediately updates word highlights across both the visual document and text views.
+   - Visual Page View with Bounding Boxes: Overlays bounding boxes on the rendered PDF sheet, color-coded by confidence (green for high confidence, amber/red for below threshold, purple for human-corrected).
+   - Right-Pane Tabbed Workspace: Includes Document Text & Word Inspector, Full Plain Text with copy button, Live JSON Output with copy and download buttons, and Audit Review Queue with jump buttons.
+   - Light and Dark Theme Toggle: Supports both light and dark modes with safe storage.
    - Export Corrected JSON: Allows downloading the updated JSON matching `schema.json` with all manual corrections preserved.
 
 ### Step 5: Present Findings to the User

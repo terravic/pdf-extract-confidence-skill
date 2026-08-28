@@ -549,13 +549,16 @@
         </div>
       `;
 
-      itemEl.querySelector('[data-action="inspect"]').addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (state.currentPage !== item.page) {
-          state.currentPage = item.page;
-        }
-        selectWord(item.page, item.wordIndex);
-      });
+      const inspectBtn = itemEl.querySelector('[data-action="inspect"]');
+      if (inspectBtn) {
+        inspectBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (state.currentPage !== item.page) {
+            state.currentPage = item.page;
+          }
+          selectWord(item.page, item.wordIndex);
+        });
+      }
 
       itemEl.addEventListener("click", () => {
         if (state.currentPage !== item.page) {

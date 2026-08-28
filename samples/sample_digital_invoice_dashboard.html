@@ -5,141 +5,414 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Word-Level Confidence Visualizer & HITL Reviewer</title>
   <style>
-/* PDF Confidence Extractor - Interactive Dashboard Stylesheet */
+/* PDF Word-Level Confidence Extraction - Modern UI Dashboard Stylesheet */
 
 :root {
-  --bg-app: #f8fafc;
+  /* Core Theme: Light Mode */
+  --bg-app: #f1f5f9;
+  --bg-header: #ffffff;
   --bg-surface: #ffffff;
-  --bg-surface-elevated: #f1f5f9;
-  --bg-surface-hover: #e2e8f0;
+  --bg-surface-elevated: #f8fafc;
+  --bg-surface-active: #e2e8f0;
+  --bg-surface-hover: #f1f5f9;
+  --bg-input: #ffffff;
+  
   --text-main: #0f172a;
+  --text-secondary: #334155;
   --text-muted: #64748b;
   --text-subtle: #94a3b8;
+  
   --border-subtle: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border-medium: #cbd5e1;
+  --border-strong: #94a3b8;
+  
   --accent-primary: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-light: #dbeafe;
-  --status-high-bg: #dcfce7;
-  --status-high-text: #166534;
-  --status-high-border: #86efac;
-  --status-low-bg: #fee2e2;
-  --status-low-text: #991b1b;
-  --status-low-border: #fca5a5;
-  --status-mid-bg: #fef3c7;
+  --accent-primary-hover: #1d4ed8;
+  --accent-subtle: #eff6ff;
+  --accent-border: #bfdbfe;
+  --accent-glow: rgba(37, 99, 235, 0.15);
+  
+  --status-high-bg: #ecfdf5;
+  --status-high-text: #065f46;
+  --status-high-border: #a7f3d0;
+  --status-high-bar: #10b981;
+  
+  --status-mid-bg: #fffbeb;
   --status-mid-text: #92400e;
-  --status-mid-border: #fcd34d;
-  --highlight-box-low: rgba(239, 68, 68, 0.35);
-  --highlight-box-high: rgba(34, 197, 94, 0.15);
-  --highlight-box-selected: rgba(37, 99, 235, 0.5);
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --status-mid-border: #fde68a;
+  --status-mid-bar: #f59e0b;
+  
+  --status-low-bg: #fef2f2;
+  --status-low-text: #991b1b;
+  --status-low-border: #fecaca;
+  --status-low-bar: #ef4444;
+
+  --bbox-high-bg: rgba(16, 185, 129, 0.12);
+  --bbox-high-border: #10b981;
+  --bbox-low-bg: rgba(239, 68, 68, 0.22);
+  --bbox-low-border: #ef4444;
+  --bbox-selected-bg: rgba(37, 99, 235, 0.35);
+  --bbox-selected-border: #2563eb;
+  --bbox-corrected-bg: rgba(139, 92, 246, 0.2);
+  --bbox-corrected-border: #8b5cf6;
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
 }
 
 [data-theme="dark"] {
-  --bg-app: #0f172a;
-  --bg-surface: #1e293b;
-  --bg-surface-elevated: #334155;
-  --bg-surface-hover: #475569;
+  /* Core Theme: Dark Mode */
+  --bg-app: #090d16;
+  --bg-header: #0f172a;
+  --bg-surface: #131d33;
+  --bg-surface-elevated: #1e293b;
+  --bg-surface-active: #334155;
+  --bg-surface-hover: #1e293b;
+  --bg-input: #0f172a;
+  
   --text-main: #f8fafc;
+  --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
   --text-subtle: #64748b;
-  --border-subtle: #334155;
+  
+  --border-subtle: #1e293b;
+  --border-medium: #334155;
   --border-strong: #475569;
+  
   --accent-primary: #3b82f6;
-  --accent-hover: #60a5fa;
-  --accent-light: #1e3a8a;
+  --accent-primary-hover: #60a5fa;
+  --accent-subtle: #1e293b;
+  --accent-border: #2563eb;
+  --accent-glow: rgba(59, 130, 246, 0.25);
+  
   --status-high-bg: #064e3b;
   --status-high-text: #6ee7b7;
-  --status-high-border: #047857;
-  --status-low-bg: #7f1d1d;
-  --status-low-text: #fca5a5;
-  --status-low-border: #b91c1c;
+  --status-high-border: #059669;
+  --status-high-bar: #10b981;
+  
   --status-mid-bg: #78350f;
   --status-mid-text: #fde68a;
-  --status-mid-border: #b45309;
-  --highlight-box-low: rgba(239, 68, 68, 0.45);
-  --highlight-box-high: rgba(34, 197, 94, 0.2);
-  --highlight-box-selected: rgba(59, 130, 246, 0.6);
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --status-mid-border: #d97706;
+  --status-mid-bar: #f59e0b;
+  
+  --status-low-bg: #7f1d1d;
+  --status-low-text: #fca5a5;
+  --status-low-border: #dc2626;
+  --status-low-bar: #ef4444;
+
+  --bbox-high-bg: rgba(16, 185, 129, 0.18);
+  --bbox-high-border: #34d399;
+  --bbox-low-bg: rgba(239, 68, 68, 0.35);
+  --bbox-low-border: #f87171;
+  --bbox-selected-bg: rgba(59, 130, 246, 0.5);
+  --bbox-selected-border: #60a5fa;
+  --bbox-corrected-bg: rgba(139, 92, 246, 0.35);
+  --bbox-corrected-border: #a78bfa;
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
 }
 
+/* Reset & Base */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
-  font-family: var(--font-family);
+  font-family: var(--font-sans);
   background-color: var(--bg-app);
   color: var(--text-main);
   line-height: 1.5;
-  font-size: 14px;
-  height: 100vh;
+  font-size: 13px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Header */
 .app-header {
-  background-color: var(--bg-surface);
+  background-color: var(--bg-header);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 10px 20px;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: var(--shadow-sm);
-  z-index: 10;
+  box-shadow: var(--shadow-xs);
+  z-index: 20;
+  flex-shrink: 0;
 }
 
-.header-brand {
-  display: flex;
-  flex-direction: column;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.header-subtitle {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.header-controls {
+.brand-section {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-/* Buttons and Form Controls */
+.brand-logo-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-primary);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  font-family: var(--font-mono);
+  box-shadow: var(--shadow-xs);
+}
+
+.brand-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+
+.brand-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* KPI Cards Strip */
+.kpi-strip {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.kpi-card {
+  flex: 1;
+  min-width: 140px;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.kpi-card:hover {
+  border-color: var(--border-medium);
+}
+
+.kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.kpi-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.kpi-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.kpi-value {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-main);
+}
+
+.kpi-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.kpi-badge.high {
+  background-color: var(--status-high-bg);
+  color: var(--status-high-text);
+  border: 1px solid var(--status-high-border);
+}
+
+.kpi-badge.low {
+  background-color: var(--status-low-bg);
+  color: var(--status-low-text);
+  border: 1px solid var(--status-low-border);
+}
+
+.kpi-badge.info {
+  background-color: var(--accent-subtle);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-border);
+}
+
+/* Control Toolbar */
+.toolbar-section {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.range-input {
+  width: 140px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.chip-presets {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preset-chip {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-medium);
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.preset-chip:hover, .preset-chip.active {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+}
+
+.view-filters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  background-color: var(--bg-surface-active);
+  color: var(--text-main);
+  font-weight: 600;
+  border-color: var(--border-strong);
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+}
+
+.search-input {
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: var(--text-main);
+  outline: none;
+  width: 140px;
+}
+
+/* Button Component */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-medium);
   background-color: var(--bg-surface);
   color: var(--text-main);
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: all var(--transition-fast);
 }
 
 .btn:hover {
   background-color: var(--bg-surface-hover);
+  border-color: var(--border-strong);
 }
 
 .btn-primary {
@@ -149,168 +422,99 @@ body {
 }
 
 .btn-primary:hover {
-  background-color: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background-color: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
 }
 
 .btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-.theme-toggle-btn {
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-/* Control Bar (Threshold Slider & Metrics) */
-.control-bar {
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.slider-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.slider-label {
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-main);
-}
-
-.threshold-slider {
-  width: 180px;
-  accent-color: var(--accent-primary);
-  cursor: pointer;
-}
-
-.threshold-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  background-color: var(--accent-light);
-  color: var(--accent-primary);
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
-}
-
-.metrics-strip {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.metric-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.metric-label {
+  padding: 3px 8px;
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
 }
 
-.metric-value {
-  font-size: 14px;
-  font-weight: 700;
-  font-family: var(--font-mono);
-}
-
-.metric-badge-low {
-  color: var(--status-low-text);
-  background-color: var(--status-low-bg);
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--status-low-border);
-}
-
-.metric-badge-high {
-  color: var(--status-high-text);
-  background-color: var(--status-high-bg);
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--status-high-border);
+.btn-icon {
+  padding: 6px 8px;
 }
 
 /* Main Split View */
-.main-container {
+.workspace-layout {
   display: flex;
   flex: 1;
   overflow: hidden;
   position: relative;
 }
 
-/* Left Pane: PDF / Document Visual View */
-.pane-visual {
-  flex: 1;
-  background-color: var(--bg-surface-elevated);
+/* Left Column: Visual Document Viewer */
+.visual-pane {
+  flex: 1.2;
+  background-color: var(--bg-app);
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.pane-header {
+.pane-topbar {
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 8px 16px;
+  padding: 6px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.pane-title {
-  font-weight: 600;
-  font-size: 13px;
+.pane-heading {
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
 }
 
-.page-navigation {
+.zoom-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-.page-indicator {
-  font-size: 12px;
+.zoom-label {
   font-family: var(--font-mono);
+  font-size: 11px;
   color: var(--text-muted);
+  min-width: 40px;
+  text-align: center;
 }
 
-.visual-viewport {
+.page-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.canvas-viewport {
   flex: 1;
   overflow: auto;
   padding: 24px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  background-color: var(--bg-app);
 }
 
-.document-page-wrapper {
+.pdf-sheet-wrapper {
   position: relative;
   background-color: #ffffff;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  user-select: none;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-xs);
+  transform-origin: top center;
+  transition: transform var(--transition-fast);
 }
 
-.document-page-canvas {
+.pdf-canvas {
   display: block;
 }
 
-.overlay-layer {
+.word-overlay-container {
   position: absolute;
   top: 0;
   left: 0;
@@ -319,299 +523,353 @@ body {
   pointer-events: none;
 }
 
-.word-bbox-highlight {
+/* Bounding Box Highlights */
+.bbox-box {
   position: absolute;
   pointer-events: auto;
   cursor: pointer;
-  transition: outline 0.1s ease, background-color 0.1s ease;
   border-radius: 2px;
+  transition: background-color var(--transition-fast), outline var(--transition-fast);
 }
 
-.word-bbox-highlight.low-confidence {
-  background-color: var(--highlight-box-low);
-  outline: 1.5px solid var(--status-low-text);
+.bbox-box.high {
+  background-color: var(--bbox-high-bg);
+  outline: 1px solid var(--bbox-high-border);
 }
 
-.word-bbox-highlight.high-confidence {
-  background-color: var(--highlight-box-high);
-  outline: 1px solid var(--status-high-text);
+.bbox-box.low {
+  background-color: var(--bbox-low-bg);
+  outline: 2px solid var(--bbox-low-border);
 }
 
-.word-bbox-highlight.selected {
-  background-color: var(--highlight-box-selected) !important;
-  outline: 2px solid var(--accent-primary) !important;
-  z-index: 5;
+.bbox-box.corrected {
+  background-color: var(--bbox-corrected-bg);
+  outline: 2px solid var(--bbox-corrected-border);
 }
 
-/* Right Pane: Text View, Inspector, and Audit Queue */
-.pane-inspector {
-  width: 480px;
-  min-width: 360px;
-  max-width: 600px;
+.bbox-box:hover {
+  outline-width: 2.5px !important;
+  z-index: 10;
+}
+
+.bbox-box.selected {
+  background-color: var(--bbox-selected-bg) !important;
+  outline: 2.5px solid var(--bbox-selected-border) !important;
+  box-shadow: 0 0 0 4px var(--accent-glow);
+  z-index: 15;
+}
+
+/* Center/Right Column: Text Flow & Inspector */
+.side-pane {
+  flex: 1;
+  min-width: 380px;
+  max-width: 550px;
   background-color: var(--bg-surface);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.tab-nav {
+.tab-bar {
   display: flex;
-  border-bottom: 1px solid var(--border-subtle);
   background-color: var(--bg-surface-elevated);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.tab-btn {
+.tab-item {
   flex: 1;
-  padding: 10px 12px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
   text-align: center;
-  background: none;
   border: none;
-  border-bottom: 2px solid transparent;
+  background: none;
   color: var(--text-muted);
+  border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: all var(--transition-fast);
 }
 
-.tab-btn:hover {
+.tab-item:hover {
   color: var(--text-main);
 }
 
-.tab-btn.active {
+.tab-item.active {
   color: var(--accent-primary);
   border-bottom-color: var(--accent-primary);
   background-color: var(--bg-surface);
-  font-weight: 600;
 }
 
-.tab-content {
+.tab-pane-content {
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
   padding: 16px;
   display: none;
 }
 
-.tab-content.active {
+.tab-pane-content.active {
   display: block;
 }
 
-/* Text Stream Viewer */
-.text-stream-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.word-token-flow {
-  line-height: 2.2;
-  font-size: 13px;
-  word-break: break-word;
-}
-
-.token-span {
-  display: inline-block;
-  padding: 1px 4px;
-  margin: 1px 2px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background-color 0.15s ease, outline 0.15s ease;
-  font-family: var(--font-family);
-}
-
-.token-span:hover {
-  outline: 1px solid var(--border-strong);
-}
-
-.token-span.token-low-conf {
-  background-color: var(--status-low-bg);
-  color: var(--status-low-text);
-  font-weight: 600;
-  border-bottom: 2px solid var(--status-low-border);
-}
-
-.token-span.token-selected {
-  background-color: var(--accent-light) !important;
-  color: var(--accent-primary) !important;
-  outline: 2px solid var(--accent-primary) !important;
-}
-
-/* Inspector / HITL Editor Card */
-.inspector-card {
+/* Inspector Card */
+.inspector-card-box {
   background-color: var(--bg-surface-elevated);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   padding: 14px;
   margin-bottom: 16px;
+  box-shadow: var(--shadow-xs);
 }
 
-.inspector-card-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 700;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.inspector-row {
+.inspector-header-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
-  font-size: 13px;
+  margin-bottom: 10px;
 }
 
-.inspector-key {
+.inspector-badge-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
 }
 
-.inspector-val {
+.word-focus-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.word-focus-text {
+  font-size: 20px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-main);
+}
+
+.confidence-meter {
+  margin-bottom: 12px;
+}
+
+.meter-track {
+  height: 6px;
+  background-color: var(--border-medium);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.meter-fill {
+  height: 100%;
+  transition: width var(--transition-normal), background-color var(--transition-normal);
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-key {
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.meta-val {
   font-family: var(--font-mono);
   font-weight: 600;
 }
 
-.edit-input-group {
-  margin-top: 10px;
+.hitl-edit-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  margin-top: 8px;
 }
 
-.edit-input {
+.hitl-input {
   flex: 1;
   padding: 6px 10px;
   font-size: 13px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  background-color: var(--bg-input);
   color: var(--text-main);
   font-family: var(--font-mono);
 }
 
-.edit-input:focus {
+.hitl-input:focus {
   outline: 2px solid var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.nav-buttons-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+/* Document Text Token Flow */
+.token-flow-container {
+  line-height: 2.3;
+  font-size: 13px;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.token-word {
+  display: inline-block;
+  padding: 1px 5px;
+  margin: 1px 2px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.token-word.high {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+.token-word.low {
+  background-color: var(--status-low-bg);
+  color: var(--status-low-text);
+  border: 1px solid var(--status-low-border);
+  font-weight: 600;
+}
+
+.token-word.corrected {
+  background-color: var(--bbox-corrected-bg);
+  border: 1px solid var(--bbox-corrected-border);
+  font-weight: 600;
+}
+
+.token-word:hover {
+  border-color: var(--accent-primary);
+}
+
+.token-word.selected {
+  background-color: var(--accent-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--accent-primary) !important;
 }
 
 /* Audit Queue Table */
-.audit-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+.audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.audit-table th {
-  text-align: left;
-  padding: 8px;
-  border-bottom: 2px solid var(--border-strong);
-  color: var(--text-muted);
-  font-size: 11px;
-  text-transform: uppercase;
-}
-
-.audit-table td {
-  padding: 8px;
-  border-bottom: 1px solid var(--border-subtle);
-  vertical-align: middle;
-}
-
-.audit-row {
+.audit-item-row {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
-.audit-row:hover {
+.audit-item-row:hover {
+  border-color: var(--border-medium);
   background-color: var(--bg-surface-hover);
 }
 
-.audit-row.selected {
-  background-color: var(--accent-light);
+.audit-item-row.selected {
+  border-color: var(--accent-primary);
+  background-color: var(--accent-subtle);
 }
 
-.audit-word {
+.audit-word-title {
   font-family: var(--font-mono);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 13px;
 }
 
-.audit-conf {
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-/* Empty States */
-.empty-state {
-  text-align: center;
-  padding: 32px 16px;
+.audit-meta-info {
+  font-size: 11px;
   color: var(--text-muted);
 }
 
-.empty-state-title {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-
-/* JSON Modal / Drawer */
-.modal-backdrop {
+/* Modal */
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-fast);
 }
 
-.modal-backdrop.open {
+.modal-overlay.open {
   opacity: 1;
   pointer-events: auto;
 }
 
-.modal-container {
+.modal-dialog {
   background-color: var(--bg-surface);
-  width: 700px;
+  width: 720px;
   max-width: 90vw;
   max-height: 85vh;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-medium);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border-strong);
 }
 
-.modal-header {
-  padding: 12px 20px;
+.modal-header-bar {
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
-.modal-body {
+.modal-content-area {
   padding: 16px;
   flex: 1;
   overflow: auto;
 }
 
-.modal-code {
+.code-viewer {
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.4;
   white-space: pre-wrap;
-  color: var(--text-main);
   background-color: var(--bg-surface-elevated);
   padding: 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
+  color: var(--text-main);
 }
 
-.modal-footer {
-  padding: 10px 20px;
+.modal-footer-bar {
+  padding: 10px 16px;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: flex-end;
@@ -622,286 +880,422 @@ body {
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
+  <!-- Top App Header -->
   <header class="app-header">
-    <div class="header-brand">
-      <h1 class="header-title">PDF Extraction & Confidence Reviewer</h1>
-      <p class="header-subtitle">Visual Document Inspector & Human-in-the-Loop Correction Dashboard</p>
+    <div class="brand-section">
+      <div class="brand-logo-badge">PDF</div>
+      <div class="brand-info">
+        <h1 class="brand-title">Word-Level Confidence Reviewer</h1>
+        <span class="brand-subtitle">Visual Document Inspector & Human-in-the-Loop Verification</span>
+      </div>
     </div>
-    <div class="header-controls">
+
+    <div class="header-actions">
       <input type="file" id="fileInput" accept=".json" style="display: none;">
-      <button class="btn btn-sm" onclick="document.getElementById('fileInput').click()">Load JSON</button>
-      <button class="btn btn-sm" id="viewJsonBtn">View JSON</button>
-      <button class="btn btn-sm btn-primary" id="exportJsonBtn">Export Corrected JSON</button>
-      <button class="btn btn-sm theme-toggle-btn" id="themeToggleBtn">[Dark Mode]</button>
+      <button class="btn" onclick="document.getElementById('fileInput').click()">
+        Load JSON
+      </button>
+      <button class="btn" id="viewJsonBtn">
+        View JSON
+      </button>
+      <button class="btn btn-primary" id="exportJsonBtn">
+        Export Corrected JSON
+      </button>
+      <button class="btn btn-icon" id="themeToggleBtn" title="Toggle Light / Dark Mode">
+        <span id="themeStatusLabel" style="font-size: 11px; font-weight: 700;">Dark Mode</span>
+      </button>
     </div>
   </header>
 
-  <!-- Interactive Control Strip -->
-  <section class="control-bar">
-    <div class="slider-group">
-      <label for="thresholdSlider" class="slider-label">Confidence Cutoff Threshold:</label>
-      <input type="range" id="thresholdSlider" class="threshold-slider" min="0.50" max="1.00" step="0.01" value="0.85">
-      <span class="threshold-badge" id="thresholdValBadge">85%</span>
+  <!-- KPI Metrics Strip -->
+  <section class="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Active Document</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-value" id="kpiFilename" style="font-size: 14px; word-break: break-all;">sample_digital_invoice.pdf</span>
+      </div>
     </div>
 
-    <div class="metrics-strip">
-      <div class="metric-item">
-        <span class="metric-label">Document</span>
-        <span class="metric-value" id="metricFilename">sample_digital_invoice.pdf</span>
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Total Words</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">Total Words</span>
-        <span class="metric-value" id="metricTotalWords">32</span>
+      <div class="kpi-value-row">
+        <span class="kpi-value" id="kpiTotalWords">34</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">Mean Confidence</span>
-        <span class="metric-value metric-badge-high" id="metricMeanConf">94.2%</span>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Mean Confidence</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">Low Confidence</span>
-        <span class="metric-value metric-badge-low" id="metricLowConf">3</span>
+      <div class="kpi-value-row">
+        <span class="kpi-value" id="kpiMeanConf">94.1%</span>
+        <span class="kpi-badge high">Certain</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">Corrected</span>
-        <span class="metric-value" id="metricCorrections">0</span>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Low Confidence</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-value" id="kpiLowConf">3</span>
+        <span class="kpi-badge low">Audit</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">Human Corrected</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-value" id="kpiCorrections">0</span>
+        <span class="kpi-badge info">Verified</span>
       </div>
     </div>
   </section>
 
-  <!-- Main Split Content Area -->
-  <main class="main-container">
+  <!-- Interactive Toolbar & Filter Controls -->
+  <section class="toolbar-section">
+    <div class="filter-controls">
+      <div class="slider-container">
+        <span class="slider-title">Cutoff Threshold:</span>
+        <input type="range" id="thresholdSlider" class="range-input" min="0.50" max="1.00" step="0.01" value="0.85">
+        <span class="kpi-badge info" id="thresholdBadge">85%</span>
+      </div>
 
-    <!-- Left Pane: Visual Document Viewer -->
-    <section class="pane-visual">
-      <div class="pane-header">
-        <span class="pane-title">Visual Document View & Bounding Boxes</span>
-        <div class="page-navigation">
+      <div class="chip-presets">
+        <button class="preset-chip" data-val="0.70">70%</button>
+        <button class="preset-chip" data-val="0.80">80%</button>
+        <button class="preset-chip active" data-val="0.85">85%</button>
+        <button class="preset-chip" data-val="0.90">90%</button>
+        <button class="preset-chip" data-val="0.95">95%</button>
+        <button class="preset-chip" data-val="1.00">100%</button>
+      </div>
+
+      <div class="view-filters">
+        <button class="filter-btn active" data-filter="all">All Words</button>
+        <button class="filter-btn" data-filter="low">Low Confidence Only</button>
+        <button class="filter-btn" data-filter="corrected">Corrected Only</button>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="searchWordsInput" class="search-input" placeholder="Search words...">
+    </div>
+  </section>
+
+  <!-- Main Split Layout -->
+  <main class="workspace-layout">
+
+    <!-- Left Column: Visual Document Page -->
+    <section class="visual-pane">
+      <div class="pane-topbar">
+        <span class="pane-heading">Visual Document View</span>
+        <div class="zoom-controls">
+          <button class="btn btn-sm btn-icon" id="zoomOutBtn" title="Zoom Out">-</button>
+          <span class="zoom-label" id="zoomLabel">100%</span>
+          <button class="btn btn-sm btn-icon" id="zoomInBtn" title="Zoom In">+</button>
+          <button class="btn btn-sm" id="zoomResetBtn">Reset</button>
+        </div>
+        <div class="page-stepper">
           <button class="btn btn-sm" id="prevPageBtn">Previous Page</button>
-          <span class="page-indicator" id="pageIndicator">Page 1 of 1</span>
+          <span id="pageIndicator" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">Page 1 of 1</span>
           <button class="btn btn-sm" id="nextPageBtn">Next Page</button>
         </div>
       </div>
-      <div class="visual-viewport" id="visualViewport">
-        <div class="document-page-wrapper" id="docWrapper">
-          <canvas id="pageCanvas" class="document-page-canvas"></canvas>
-          <div class="overlay-layer" id="overlayLayer"></div>
+
+      <div class="canvas-viewport" id="canvasViewport">
+        <div class="pdf-sheet-wrapper" id="sheetWrapper">
+          <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
+          <div class="word-overlay-container" id="overlayContainer"></div>
         </div>
       </div>
     </section>
 
-    <!-- Right Pane: Text Inspector & Audit Queue -->
-    <section class="pane-inspector">
-      <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="tabText">Document Text</button>
-        <button class="tab-btn" data-tab="tabAudit">Audit Queue</button>
+    <!-- Right Column: Inspector & Audit Hub -->
+    <section class="side-pane">
+      <nav class="tab-bar">
+        <button class="tab-item active" data-tab="tabDocumentText">Document Text</button>
+        <button class="tab-item" data-tab="tabAuditQueue">Audit Queue</button>
       </nav>
 
-      <!-- Tab 1: Text View & Word Inspector -->
-      <div class="tab-content active" id="tabText">
+      <!-- Tab 1: Text View and Inspector -->
+      <div class="tab-pane-content active" id="tabDocumentText">
         
-        <!-- HITL Word Inspector Card -->
-        <div class="inspector-card" id="inspectorCard" style="display: none;">
-          <div class="inspector-card-title">Word Inspection & Correction</div>
-          <div class="inspector-row">
-            <span class="inspector-key">Current Token:</span>
-            <span class="inspector-val" id="inspWord">-</span>
+        <!-- Inspector Card -->
+        <div class="inspector-card-box" id="inspectorCard" style="display: none;">
+          <div class="inspector-header-row">
+            <span class="inspector-badge-title">Word Inspector & Correction</span>
           </div>
-          <div class="inspector-row">
-            <span class="inspector-key">Confidence Score:</span>
-            <span class="inspector-val" id="inspConf">-</span>
+
+          <div class="word-focus-display">
+            <span class="word-focus-text" id="inspWordText">-</span>
+            <span class="kpi-badge info" id="inspConfScore">100.0%</span>
           </div>
-          <div class="inspector-row">
-            <span class="inspector-key">Extraction Source:</span>
-            <span class="inspector-val" id="inspSource">-</span>
+
+          <div class="confidence-meter">
+            <div class="meter-track">
+              <div class="meter-fill" id="inspMeterFill" style="width: 100%; background-color: var(--status-high-bar);"></div>
+            </div>
           </div>
-          <div class="inspector-row">
-            <span class="inspector-key">Page & Bounding Box:</span>
-            <span class="inspector-val" id="inspBBox">-</span>
+
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-key">Source</span>
+              <span class="meta-val" id="inspSource">digital</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-key">Page</span>
+              <span class="meta-val" id="inspPage">Page 1</span>
+            </div>
+            <div class="meta-item" style="grid-column: span 2;">
+              <span class="meta-key">Bounding Box Coordinates</span>
+              <span class="meta-val" id="inspBbox">[0, 0, 0, 0]</span>
+            </div>
           </div>
-          <div class="edit-input-group">
-            <input type="text" class="edit-input" id="inspEditInput" placeholder="Enter manual correction...">
-            <button class="btn btn-sm btn-primary" id="applyCorrectionBtn">Apply</button>
-            <button class="btn btn-sm" id="approveAsIsBtn">Approve</button>
+
+          <div class="hitl-edit-row">
+            <input type="text" id="inspEditInput" class="hitl-input" placeholder="Type manual correction...">
+            <button class="btn btn-primary btn-sm" id="applyCorrectionBtn">Apply</button>
+            <button class="btn btn-sm" id="approveBtn">Approve</button>
+          </div>
+
+          <div class="nav-buttons-row">
+            <button class="btn btn-sm" id="prevIssueBtn">&lt; Prev Issue</button>
+            <button class="btn btn-sm" id="nextIssueBtn">Next Issue &gt;</button>
           </div>
         </div>
 
-        <div class="empty-state" id="inspectorEmpty">
-          <p class="empty-state-title">No Word Selected</p>
-          <p>Click on any word on the left PDF view or from the text below to inspect coordinates and edit text.</p>
+        <div class="inspector-card-box" id="inspectorEmpty">
+          <div class="inspector-badge-title" style="margin-bottom: 6px;">Select a Word Token</div>
+          <p style="font-size: 12px; color: var(--text-muted);">
+            Click on any word in the visual document on the left or click a word chip below to inspect coordinates, view confidence details, and make corrections.
+          </p>
         </div>
 
-        <div class="text-stream-container">
-          <div class="inspector-card-title">Extracted Text Stream</div>
-          <div class="word-token-flow" id="textStreamFlow"></div>
+        <div style="font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 8px;">
+          Extracted Token Flow
         </div>
+        <div class="token-flow-container" id="tokenFlowContainer"></div>
       </div>
 
       <!-- Tab 2: Audit Review Queue -->
-      <div class="tab-content" id="tabAudit">
-        <div class="inspector-card-title">Low Confidence Review Items</div>
+      <div class="tab-pane-content" id="tabAuditQueue">
+        <div style="font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 6px;">
+          Low Confidence Review Items
+        </div>
         <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-          Words currently scoring below the selected threshold cutoff. Click any row to inspect and correct on the PDF page.
+          Words currently scoring below the selected cutoff threshold. Click any item to inspect and verify on the PDF page.
         </p>
 
-        <div class="empty-state" id="auditEmptyState" style="display: none;">
-          <p class="empty-state-title">No Low Confidence Words</p>
-          <p>All extracted tokens on this document meet or exceed the selected threshold.</p>
+        <div class="inspector-card-box" id="auditEmptyState" style="display: none;">
+          <div style="font-weight: 600; font-size: 13px; color: var(--text-main); margin-bottom: 4px;">No Low-Confidence Tokens</div>
+          <p style="font-size: 12px; color: var(--text-muted);">All extracted words in this document meet or exceed the selected threshold.</p>
         </div>
 
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th>Word</th>
-              <th>Confidence</th>
-              <th>Page</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="auditTableBody"></tbody>
-        </table>
+        <div class="audit-list" id="auditListContainer"></div>
       </div>
     </section>
   </main>
 
-  <!-- View JSON Modal -->
-  <div class="modal-backdrop" id="jsonModal">
-    <div class="modal-container">
-      <div class="modal-header">
-        <span class="pane-title">Structured Output JSON</span>
+  <!-- Structured JSON Modal -->
+  <div class="modal-overlay" id="jsonModal">
+    <div class="modal-dialog">
+      <div class="modal-header-bar">
+        <span style="font-weight: 700; font-size: 14px;">Structured JSON Output</span>
         <button class="btn btn-sm" id="closeModalBtn">Close</button>
       </div>
-      <div class="modal-body">
-        <pre class="modal-code" id="modalJsonCode"></pre>
+      <div class="modal-content-area">
+        <pre class="code-viewer" id="jsonModalCode"></pre>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-sm btn-primary" id="copyJsonBtn">Copy JSON</button>
+      <div class="modal-footer-bar">
+        <button class="btn btn-primary btn-sm" id="copyJsonBtn">Copy JSON</button>
       </div>
     </div>
   </div>
 
   <script>
 /**
- * PDF Confidence Extractor - Interactive Dashboard Logic
+ * PDF Word-Level Confidence Extraction - Modern UI Dashboard Application
  *
- * Implements threshold slider dynamic filtering, synchronized visual PDF
- * bounding box overlays, human-in-the-loop word editing, and JSON export.
+ * Provides dynamic threshold filtering, visual document coordinate overlays,
+ * synchronized text selection, human-in-the-loop editing, and theme switching.
  */
 
 (function () {
   "use strict";
 
-  // Default synthetic sample dataset for immediate live demonstration
-  const DEFAULT_SAMPLE_DATA = {"metadata": {"filename": "sample_digital_invoice.pdf", "total_pages": 1, "extraction_engine": "hybrid_extractor", "timestamp_utc": "2026-08-28T14:20:05.702355+00:00", "total_words": 116, "mean_confidence": 1.0, "min_confidence": 1.0, "low_confidence_count": 0, "low_confidence_threshold": 0.85}, "full_text": "APEX LOGISTICS & CLOUD SERVICES
-100 Enterprise Boulevard, Suite 400 | Metro City, NY 10001
-Billing Inquiries: billing@apexlogistics-synthetic.example.com
-Invoice Number: INV-2026-8841 Invoice Date: 2026-08-28
-Customer ID: CUST-9921-X Payment Due: 2026-09-28
-Purchase Order: PO-771029 Currency: USD ($)
-Itemized Charges
-Description Qty Unit Price ($) Total Amount ($)
-Cloud Storage Infrastructure - Tier 2 (TB/Month) 25 12.00 300.00
-Enterprise API Gateway Throughput Units 50 4.50 225.00
-Automated Security Compliance Auditing Module 1 450.00 450.00
-Technical Support & SLA Maintenance (Silver) 1 175.00 175.00
-Subtotal: 1,150.00
-State Tax (8.25%): 94.88
-Total Balance Due: 1,244.88
-Payment Instructions:
-Please remit payments via Automated Clearing House (ACH) or Wire Transfer to Apex Logistics Treasury
-Account within 30 days of the invoice date.", "pages": [{"page_number": 1, "page_type": "digital", "width": 612.0, "height": 792.0, "word_count": 116, "mean_confidence": 1.0, "text": "APEX LOGISTICS & CLOUD SERVICES
-100 Enterprise Boulevard, Suite 400 | Metro City, NY 10001
-Billing Inquiries: billing@apexlogistics-synthetic.example.com
-Invoice Number: INV-2026-8841 Invoice Date: 2026-08-28
-Customer ID: CUST-9921-X Payment Due: 2026-09-28
-Purchase Order: PO-771029 Currency: USD ($)
-Itemized Charges
-Description Qty Unit Price ($) Total Amount ($)
-Cloud Storage Infrastructure - Tier 2 (TB/Month) 25 12.00 300.00
-Enterprise API Gateway Throughput Units 50 4.50 225.00
-Automated Security Compliance Auditing Module 1 450.00 450.00
-Technical Support & SLA Maintenance (Silver) 1 175.00 175.00
-Subtotal: 1,150.00
-State Tax (8.25%): 94.88
-Total Balance Due: 1,244.88
-Payment Instructions:
-Please remit payments via Automated Clearing House (ACH) or Wire Transfer to Apex Logistics Treasury
-Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confidence": 1.0, "source": "digital", "bbox": {"x0": 60.0, "top": 64.14, "x1": 114.46, "bottom": 84.14}}, {"word": "LOGISTICS", "confidence": 1.0, "source": "digital", "bbox": {"x0": 120.02, "top": 64.14, "x1": 227.82, "bottom": 84.14}}, {"word": "&", "confidence": 1.0, "source": "digital", "bbox": {"x0": 233.38, "top": 64.14, "x1": 247.82, "bottom": 84.14}}, {"word": "CLOUD", "confidence": 1.0, "source": "digital", "bbox": {"x0": 253.38, "top": 64.14, "x1": 324.48, "bottom": 84.14}}, {"word": "SERVICES", "confidence": 1.0, "source": "digital", "bbox": {"x0": 330.04, "top": 64.14, "x1": 431.18, "bottom": 84.14}}, {"word": "100", "confidence": 1.0, "source": "digital", "bbox": {"x0": 60.0, "top": 92.07, "x1": 76.68, "bottom": 102.07}}, {"word": "Enterprise", "confidence": 1.0, "source": "digital", "bbox": {"x0": 79.46, "top": 92.07, "x1": 125.03, "bottom": 102.07}}, {"word": "Boulevard,", "confidence": 1.0, "source": "digital", "bbox": {"x0": 127.81, "top": 92.07, "x1": 175.61, "bottom": 102.07}}, {"word": "Suite", "confidence": 1.0, "source": "digital", "bbox": {"x0": 178.39, "top": 92.07, "x1": 201.18, "bottom": 102.07}}, {"word": "400", "confidence": 1.0, "source": "digital", "bbox": {"x0": 203.96, "top": 92.07, "x1": 220.64, "bottom": 102.07}}, {"word": "|", "confidence": 1.0, "source": "digital", "bbox": {"x0": 223.42, "top": 92.07, "x1": 226.02, "bottom": 102.07}}, {"word": "Metro", "confidence": 1.0, "source": "digital", "bbox": {"x0": 228.8, "top": 92.07, "x1": 254.36, "bottom": 102.07}}, {"word": "City,", "confidence": 1.0, "source": "digital", "bbox": {"x0": 257.14, "top": 92.07, "x1": 277.14, "bottom": 102.07}}, {"word": "NY", "confidence": 1.0, "source": "digital", "bbox": {"x0": 279.92, "top": 92.07, "x1": 293.81, "bottom": 102.07}}, {"word": "10001", "confidence": 1.0, "source": "digital", "bbox": {"x0": 296.59, "top": 92.07, "x1": 324.39, "bottom": 102.07}}, {"word": "Billing", "confidence": 1.0, "source": "digital", "bbox": {"x0": 60.0, "top": 104.07, "x1": 86.67, "bottom": 114.07}}, {"word": "Inquiries:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 89.45, "top": 104.07, "x1": 130.02, "bottom": 114.07}}, {"word": "billing@apexlogistics-synthetic.example.com", "confidence": 1.0, "source": "digital", "bbox": {"x0": 132.8, "top": 104.07, "x1": 330.78, "bottom": 114.07}}, {"word": "Invoice", "confidence": 1.0, "source": "digital", "bbox": {"x0": 78.0, "top": 137.86, "x1": 106.51, "bottom": 146.86}}, {"word": "Number:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 109.01, "top": 137.86, "x1": 143.52, "bottom": 146.86}}, {"word": "INV-2026-8841", "confidence": 1.0, "source": "digital", "bbox": {"x0": 186.0, "top": 137.86, "x1": 247.03, "bottom": 146.86}}, {"word": "Invoice", "confidence": 1.0, "source": "digital", "bbox": {"x0": 330.0, "top": 137.86, "x1": 358.51, "bottom": 146.86}}, {"word": "Date:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 361.01, "top": 137.86, "x1": 382.52, "bottom": 146.86}}, {"word": "2026-08-28", "confidence": 1.0, "source": "digital", "bbox": {"x0": 423.6, "top": 137.86, "x1": 469.63, "bottom": 146.86}}, {"word": "Customer", "confidence": 1.0, "source": "digital", "bbox": {"x0": 78.0, "top": 157.86, "x1": 117.01, "bottom": 166.86}}, {"word": "ID:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 119.51, "top": 157.86, "x1": 131.01, "bottom": 166.86}}, {"word": "CUST-9921-X", "confidence": 1.0, "source": "digital", "bbox": {"x0": 186.0, "top": 157.86, "x1": 242.51, "bottom": 166.86}}, {"word": "Payment", "confidence": 1.0, "source": "digital", "bbox": {"x0": 330.0, "top": 157.86, "x1": 365.51, "bottom": 166.86}}, {"word": "Due:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 368.02, "top": 157.86, "x1": 387.02, "bottom": 166.86}}, {"word": "2026-09-28", "confidence": 1.0, "source": "digital", "bbox": {"x0": 423.6, "top": 157.86, "x1": 469.63, "bottom": 166.86}}, {"word": "Purchase", "confidence": 1.0, "source": "digital", "bbox": {"x0": 78.0, "top": 177.86, "x1": 116.02, "bottom": 186.86}}, {"word": "Order:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 118.52, "top": 177.86, "x1": 144.02, "bottom": 186.86}}, {"word": "PO-771029", "confidence": 1.0, "source": "digital", "bbox": {"x0": 186.0, "top": 177.86, "x1": 232.03, "bottom": 186.86}}, {"word": "Currency:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 330.0, "top": 177.86, "x1": 369.01, "bottom": 186.86}}, {"word": "USD", "confidence": 1.0, "source": "digital", "bbox": {"x0": 423.6, "top": 177.86, "x1": 442.6, "bottom": 186.86}}, {"word": "($)", "confidence": 1.0, "source": "digital", "bbox": {"x0": 445.1, "top": 177.86, "x1": 456.1, "bottom": 186.86}}, {"word": "Itemized", "confidence": 1.0, "source": "digital", "bbox": {"x0": 60.0, "top": 228.08, "x1": 108.01, "bottom": 240.08}}, {"word": "Charges", "confidence": 1.0, "source": "digital", "bbox": {"x0": 111.35, "top": 228.08, "x1": 159.36, "bottom": 240.08}}, {"word": "Description", "confidence": 1.0, "source": "digital", "bbox": {"x0": 78.0, "top": 259.66, "x1": 127.51, "bottom": 268.66}}, {"word": "Qty", "confidence": 1.0, "source": "digital", "bbox": {"x0": 339.0, "top": 259.66, "x1": 354.0, "bottom": 268.66}}, {"word": "Unit", "confidence": 1.0, "source": "digital", "bbox": {"x0": 384.89, "top": 259.66, "x1": 402.38, "bottom": 268.66}}, {"word": "Price", "confidence": 1.0, "source": "digital", "bbox": {"x0": 404.89, "top": 259.66, "x1": 426.9, "bottom": 268.66}}, {"word": "($)", "confidence": 1.0, "source": "digital", "bbox": {"x0": 429.4, "top": 259.66, "x1": 440.4, "bottom": 268.66}}, {"word": "Total", "confidence": 1.0, "source": "digital", "bbox": {"x0": 462.5, "top": 259.66, "x1": 484.01, "bottom": 268.66}}, {"word": "Amount", "confidence": 1.0, "source": "digital", "bbox": {"x0": 486.51, "top": 259.66, "x1": 520.5, "bottom": 268.66}}, {"word": "($)", "confidence": 1.0, "source": "digital", "bbox": {"x0": 523.0, "top": 259.66, "x1": 534.0, "bottom": 268.66}}, {"word": "Cloud", "confidence": 1.0, "source": "digital", "bbox": {"x0": 78.0, "top": 281.87, "x1": 104.12, "bottom": 291.87}}, {"word": "Storage", "confidence": 1.0, "source": "digital", "bbox": {"x0": 106.9, "top": 281.87, "x1": 141.92, "bottom": 291.87}}, {"word": "Infrastructure", "confidence": 1.0, "source": "digital", "bbox": {"x0": 144.7, "top": 281.87, "x1": 203.61, "bottom": 291.87}}, {"word": "-", "confidence": 1.0, "source": "digital", "bbox": {"x0": 206.39, "top": 281.87, "x1": 209.72, "bottom": 291.87}}, {"word": "Tier", "confidence": 1.0, "source": "digital", "bbox": {"x0": 212.5, "top": 281.87, "x1": 229.72, "bottom": 291.87}}, {"word": "2", "confidence": 1.0, "source": "digital", "bbox": {"x0": 232.5, "top": 281.87, "x1": 238.06, "bottom": 291.87}}, {"word": "(TB/Month)", "confidence": 1.0, "source": "digital", "bbox": {"x0": 240.84, "top": 281.87, "x1": 290.85, "bottom": 291.87}}, {"word": "25", "confidence": 1.0, "source": "digital", "bbox": {"x0": 342.88, "top": 281.87, "x1": 354.0, "bottom": 291.87}}, {"word": "12.00", "confidence": 1.0, "source": "digital", "bbox": {"x0": 415.38, "top": 281.87, "x1": 440.4, "bottom": 291.87}}, {"word": "300.00", "confidence": 1.0, "source": "digital", "bbox": {"x0": 503.42, "top": 281.87, "x1": 534.0, "bottom": 291.87}}, {"word": "Enterprise", "confidence": 1.0, "source": "digital", "bbox": {"x0": 78.0, "top": 303.87, "x1": 123.57, "bottom": 313.87}}, {"word": "API", "confidence": 1.0, "source": "digital", "bbox": {"x0": 126.35, "top": 303.87, "x1": 142.47, "bottom": 313.87}}, {"word": "Gateway", "confidence": 1.0, "source": "digital", "bbox": {"x0": 145.25, "top": 303.87, "x1": 184.71, "bottom": 313.87}}, {"word": "Throughput", "confidence": 1.0, "source": "digital", "bbox": {"x0": 187.49, "top": 303.87, "x1": 238.63, "bottom": 313.87}}, {"word": "Units", "confidence": 1.0, "source": "digital", "bbox": {"x0": 241.41, "top": 303.87, "x1": 264.19, "bottom": 313.87}}, {"word": "50", "confidence": 1.0, "source": "digital", "bbox": {"x0": 342.88, "top": 303.87, "x1": 354.0, "bottom": 313.87}}, {"word": "4.50", "confidence": 1.0, "source": "digital", "bbox": {"x0": 420.94, "top": 303.87, "x1": 440.4, "bottom": 313.87}}, {"word": "225.00", "confidence": 1.0, "source": "digital", "bbox": {"x0": 503.42, "top": 303.87, "x1": 534.0, "bottom": 313.87}}, {"word": "Automated", "confidence": 1.0, "source": "digital", "bbox": {"x0": 78.0, "top": 325.87, "x1": 126.36, "bottom": 335.87}}, {"word": "Security", "confidence": 1.0, "source": "digital", "bbox": {"x0": 129.14, "top": 325.87, "x1": 165.26, "bottom": 335.87}}, {"word": "Compliance", "confidence": 1.0, "source": "digital", "bbox": {"x0": 168.04, "top": 325.87, "x1": 220.83, "bottom": 335.87}}, {"word": "Auditing", "confidence": 1.0, "source": "digital", "bbox": {"x0": 223.61, "top": 325.87, "x1": 259.74, "bottom": 335.87}}, {"word": "Module", "confidence": 1.0, "source": "digital", "bbox": {"x0": 262.52, "top": 325.87, "x1": 295.31, "bottom": 335.87}}, {"word": "1", "confidence": 1.0, "source": "digital", "bbox": {"x0": 348.44, "top": 325.87, "x1": 354.0, "bottom": 335.87}}, {"word": "450.00", "confidence": 1.0, "source": "digital", "bbox": {"x0": 409.82, "top": 325.87, "x1": 440.4, "bottom": 335.87}}, {"word": "450.00", "confidence": 1.0, "source": "digital", "bbox": {"x0": 503.42, "top": 325.87, "x1": 534.0, "bottom": 335.87}}, {"word": "Technical", "confidence": 1.0, "source": "digital", "bbox": {"x0": 78.0, "top": 347.87, "x1": 120.79, "bottom": 357.87}}, {"word": "Support", "confidence": 1.0, "source": "digital", "bbox": {"x0": 123.57, "top": 347.87, "x1": 158.59, "bottom": 357.87}}, {"word": "&", "confidence": 1.0, "source": "digital", "bbox": {"x0": 161.37, "top": 347.87, "x1": 168.04, "bottom": 357.87}}, {"word": "SLA", "confidence": 1.0, "source": "digital", "bbox": {"x0": 170.82, "top": 347.87, "x1": 189.72, "bottom": 357.87}}, {"word": "Maintenance", "confidence": 1.0, "source": "digital", "bbox": {"x0": 192.5, "top": 347.87, "x1": 249.75, "bottom": 357.87}}, {"word": "(Silver)", "confidence": 1.0, "source": "digital", "bbox": {"x0": 252.53, "top": 347.87, "x1": 284.19, "bottom": 357.87}}, {"word": "1", "confidence": 1.0, "source": "digital", "bbox": {"x0": 348.44, "top": 347.87, "x1": 354.0, "bottom": 357.87}}, {"word": "175.00", "confidence": 1.0, "source": "digital", "bbox": {"x0": 409.82, "top": 347.87, "x1": 440.4, "bottom": 357.87}}, {"word": "175.00", "confidence": 1.0, "source": "digital", "bbox": {"x0": 503.42, "top": 347.87, "x1": 534.0, "bottom": 357.87}}, {"word": "Subtotal:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 397.07, "top": 369.87, "x1": 440.4, "bottom": 379.87}}, {"word": "1,150.00", "confidence": 1.0, "source": "digital", "bbox": {"x0": 495.08, "top": 369.87, "x1": 534.0, "bottom": 379.87}}, {"word": "State", "confidence": 1.0, "source": "digital", "bbox": {"x0": 354.82, "top": 391.87, "x1": 379.27, "bottom": 401.87}}, {"word": "Tax", "confidence": 1.0, "source": "digital", "bbox": {"x0": 382.05, "top": 391.87, "x1": 399.28, "bottom": 401.87}}, {"word": "(8.25%):", "confidence": 1.0, "source": "digital", "bbox": {"x0": 402.06, "top": 391.87, "x1": 440.4, "bottom": 401.87}}, {"word": "94.88", "confidence": 1.0, "source": "digital", "bbox": {"x0": 508.98, "top": 391.87, "x1": 534.0, "bottom": 401.87}}, {"word": "Total", "confidence": 1.0, "source": "digital", "bbox": {"x0": 350.38, "top": 413.87, "x1": 374.27, "bottom": 423.87}}, {"word": "Balance", "confidence": 1.0, "source": "digital", "bbox": {"x0": 377.05, "top": 413.87, "x1": 415.4, "bottom": 423.87}}, {"word": "Due:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 418.18, "top": 413.87, "x1": 440.4, "bottom": 423.87}}, {"word": "1,244.88", "confidence": 1.0, "source": "digital", "bbox": {"x0": 495.08, "top": 413.87, "x1": 534.0, "bottom": 423.87}}, {"word": "Payment", "confidence": 1.0, "source": "digital", "bbox": {"x0": 60.0, "top": 469.67, "x1": 101.68, "bottom": 479.67}}, {"word": "Instructions:", "confidence": 1.0, "source": "digital", "bbox": {"x0": 104.46, "top": 469.67, "x1": 165.02, "bottom": 479.67}}, {"word": "Please", "confidence": 1.0, "source": "digital", "bbox": {"x0": 60.0, "top": 485.67, "x1": 90.57, "bottom": 495.67}}, {"word": "remit", "confidence": 1.0, "source": "digital", "bbox": {"x0": 93.35, "top": 485.67, "x1": 115.57, "bottom": 495.67}}, {"word": "payments", "confidence": 1.0, "source": "digital", "bbox": {"x0": 118.35, "top": 485.67, "x1": 161.7, "bottom": 495.67}}, {"word": "via", "confidence": 1.0, "source": "digital", "bbox": {"x0": 164.48, "top": 485.67, "x1": 177.26, "bottom": 495.67}}, {"word": "Automated", "confidence": 1.0, "source": "digital", "bbox": {"x0": 180.04, "top": 485.67, "x1": 228.4, "bottom": 495.67}}, {"word": "Clearing", "confidence": 1.0, "source": "digital", "bbox": {"x0": 231.18, "top": 485.67, "x1": 268.41, "bottom": 495.67}}, {"word": "House", "confidence": 1.0, "source": "digital", "bbox": {"x0": 271.19, "top": 485.67, "x1": 300.09, "bottom": 495.67}}, {"word": "(ACH)", "confidence": 1.0, "source": "digital", "bbox": {"x0": 302.87, "top": 485.67, "x1": 330.64, "bottom": 495.67}}, {"word": "or", "confidence": 1.0, "source": "digital", "bbox": {"x0": 333.42, "top": 485.67, "x1": 342.31, "bottom": 495.67}}, {"word": "Wire", "confidence": 1.0, "source": "digital", "bbox": {"x0": 345.09, "top": 485.67, "x1": 365.64, "bottom": 495.67}}, {"word": "Transfer", "confidence": 1.0, "source": "digital", "bbox": {"x0": 368.42, "top": 485.67, "x1": 405.65, "bottom": 495.67}}, {"word": "to", "confidence": 1.0, "source": "digital", "bbox": {"x0": 408.43, "top": 485.67, "x1": 416.77, "bottom": 495.67}}, {"word": "Apex", "confidence": 1.0, "source": "digital", "bbox": {"x0": 419.55, "top": 485.67, "x1": 442.34, "bottom": 495.67}}, {"word": "Logistics", "confidence": 1.0, "source": "digital", "bbox": {"x0": 445.12, "top": 485.67, "x1": 484.02, "bottom": 495.67}}, {"word": "Treasury", "confidence": 1.0, "source": "digital", "bbox": {"x0": 486.8, "top": 485.67, "x1": 526.25, "bottom": 495.67}}, {"word": "Account", "confidence": 1.0, "source": "digital", "bbox": {"x0": 60.0, "top": 497.67, "x1": 96.13, "bottom": 507.67}}, {"word": "within", "confidence": 1.0, "source": "digital", "bbox": {"x0": 98.91, "top": 497.67, "x1": 124.47, "bottom": 507.67}}, {"word": "30", "confidence": 1.0, "source": "digital", "bbox": {"x0": 127.25, "top": 497.67, "x1": 138.37, "bottom": 507.67}}, {"word": "days", "confidence": 1.0, "source": "digital", "bbox": {"x0": 141.15, "top": 497.67, "x1": 162.27, "bottom": 507.67}}, {"word": "of", "confidence": 1.0, "source": "digital", "bbox": {"x0": 165.05, "top": 497.67, "x1": 173.39, "bottom": 507.67}}, {"word": "the", "confidence": 1.0, "source": "digital", "bbox": {"x0": 176.17, "top": 497.67, "x1": 190.07, "bottom": 507.67}}, {"word": "invoice", "confidence": 1.0, "source": "digital", "bbox": {"x0": 192.85, "top": 497.67, "x1": 223.97, "bottom": 507.67}}, {"word": "date.", "confidence": 1.0, "source": "digital", "bbox": {"x0": 226.75, "top": 497.67, "x1": 248.99, "bottom": 507.67}}]}], "low_confidence_words": []};
+  // Built-in synthetic datasets for immediate interactive preview
+  const SAMPLE_DATASETS = {
+    invoice: {
+      metadata: {
+        filename: "sample_digital_invoice.pdf",
+        total_pages: 1,
+        extraction_engine: "hybrid_extractor",
+        timestamp_utc: new Date().toISOString(),
+        total_words: 34,
+        mean_confidence: 0.9412,
+        min_confidence: 0.68,
+        low_confidence_count: 3,
+        low_confidence_threshold: 0.85
+      },
+      full_text: "APEX LOGISTICS & CLOUD SERVICES\n100 Enterprise Boulevard, Suite 400 | Metro City, NY 10001\nInvoice Number: INV-2026-8841 Date: 2026-08-28\nItem 1: Cloud Storage Tier 2 $300.00\nItem 2: API Gateway Units $225.00\nTotal Balance Due: $1,244.88\nAuthorized Status: APPROVED",
+      pages: [
+        {
+          page_number: 1,
+          page_type: "digital",
+          width: 612.0,
+          height: 792.0,
+          word_count: 34,
+          mean_confidence: 0.9412,
+          text: "APEX LOGISTICS & CLOUD SERVICES\n100 Enterprise Boulevard, Suite 400 | Metro City, NY 10001\nInvoice Number: INV-2026-8841 Date: 2026-08-28\nItem 1: Cloud Storage Tier 2 $300.00\nItem 2: API Gateway Units $225.00\nTotal Balance Due: $1,244.88\nAuthorized Status: APPROVED",
+          words: [
+            { word: "APEX", confidence: 1.0, source: "digital", bbox: { x0: 60.0, top: 64.0, x1: 114.5, bottom: 84.0 } },
+            { word: "LOGISTICS", confidence: 1.0, source: "digital", bbox: { x0: 120.0, top: 64.0, x1: 227.8, bottom: 84.0 } },
+            { word: "&", confidence: 1.0, source: "digital", bbox: { x0: 233.4, top: 64.0, x1: 247.8, bottom: 84.0 } },
+            { word: "CLOUD", confidence: 1.0, source: "digital", bbox: { x0: 253.4, top: 64.0, x1: 324.5, bottom: 84.0 } },
+            { word: "SERVICES", confidence: 1.0, source: "digital", bbox: { x0: 330.0, top: 64.0, x1: 431.2, bottom: 84.0 } },
+            { word: "100", confidence: 1.0, source: "digital", bbox: { x0: 60.0, top: 92.0, x1: 76.7, bottom: 102.0 } },
+            { word: "Enterprise", confidence: 1.0, source: "digital", bbox: { x0: 79.5, top: 92.0, x1: 125.0, bottom: 102.0 } },
+            { word: "Boulevard,", confidence: 0.74, source: "ocr", bbox: { x0: 127.8, top: 92.0, x1: 175.6, bottom: 102.0 } },
+            { word: "Suite", confidence: 1.0, source: "digital", bbox: { x0: 178.4, top: 92.0, x1: 201.2, bottom: 102.0 } },
+            { word: "400", confidence: 1.0, source: "digital", bbox: { x0: 204.0, top: 92.0, x1: 220.6, bottom: 102.0 } },
+            { word: "|", confidence: 1.0, source: "digital", bbox: { x0: 223.4, top: 92.0, x1: 226.0, bottom: 102.0 } },
+            { word: "Metro", confidence: 1.0, source: "digital", bbox: { x0: 228.8, top: 92.0, x1: 254.4, bottom: 102.0 } },
+            { word: "City,", confidence: 1.0, source: "digital", bbox: { x0: 257.1, top: 92.0, x1: 277.1, bottom: 102.0 } },
+            { word: "NY", confidence: 1.0, source: "digital", bbox: { x0: 279.9, top: 92.0, x1: 293.8, bottom: 102.0 } },
+            { word: "10001", confidence: 1.0, source: "digital", bbox: { x0: 296.6, top: 92.0, x1: 324.4, bottom: 102.0 } },
+            { word: "Invoice", confidence: 1.0, source: "digital", bbox: { x0: 60.0, top: 137.8, x1: 106.5, bottom: 146.8 } },
+            { word: "Number:", confidence: 1.0, source: "digital", bbox: { x0: 109.0, top: 137.8, x1: 143.5, bottom: 146.8 } },
+            { word: "INV-2026-8841", confidence: 0.71, source: "ocr", bbox: { x0: 150.0, top: 137.8, x1: 230.0, bottom: 146.8 } },
+            { word: "Date:", confidence: 1.0, source: "digital", bbox: { x0: 330.0, top: 137.8, x1: 358.5, bottom: 146.8 } },
+            { word: "2026-08-28", confidence: 1.0, source: "digital", bbox: { x0: 365.0, top: 137.8, x1: 425.0, bottom: 146.8 } },
+            { word: "Item", confidence: 1.0, source: "digital", bbox: { x0: 60.0, top: 180.0, x1: 85.0, bottom: 190.0 } },
+            { word: "1:", confidence: 1.0, source: "digital", bbox: { x0: 88.0, top: 180.0, x1: 98.0, bottom: 190.0 } },
+            { word: "Cloud", confidence: 1.0, source: "digital", bbox: { x0: 105.0, top: 180.0, x1: 135.0, bottom: 190.0 } },
+            { word: "Storage", confidence: 1.0, source: "digital", bbox: { x0: 140.0, top: 180.0, x1: 180.0, bottom: 190.0 } },
+            { word: "Tier", confidence: 1.0, source: "digital", bbox: { x0: 185.0, top: 180.0, x1: 205.0, bottom: 190.0 } },
+            { word: "2", confidence: 1.0, source: "digital", bbox: { x0: 210.0, top: 180.0, x1: 218.0, bottom: 190.0 } },
+            { word: "$300.00", confidence: 1.0, source: "digital", bbox: { x0: 450.0, top: 180.0, x1: 495.0, bottom: 190.0 } },
+            { word: "Item", confidence: 1.0, source: "digital", bbox: { x0: 60.0, top: 205.0, x1: 85.0, bottom: 215.0 } },
+            { word: "2:", confidence: 1.0, source: "digital", bbox: { x0: 88.0, top: 205.0, x1: 98.0, bottom: 215.0 } },
+            { word: "API", confidence: 1.0, source: "digital", bbox: { x0: 105.0, top: 205.0, x1: 125.0, bottom: 215.0 } },
+            { word: "Gateway", confidence: 1.0, source: "digital", bbox: { x0: 130.0, top: 205.0, x1: 175.0, bottom: 215.0 } },
+            { word: "Units", confidence: 1.0, source: "digital", bbox: { x0: 180.0, top: 205.0, x1: 205.0, bottom: 215.0 } },
+            { word: "$225.00", confidence: 1.0, source: "digital", bbox: { x0: 450.0, top: 205.0, x1: 495.0, bottom: 215.0 } },
+            { word: "$1,244.88", confidence: 0.68, source: "ocr", bbox: { x0: 450.0, top: 240.0, x1: 505.0, bottom: 250.0 } }
+          ]
+        }
+      ],
+      low_confidence_words: []
+    }
+  };
 
-  // Application State
+  const DEFAULT_DATA = SAMPLE_DATASETS.invoice;
+
+  // Global State
   const state = {
-    data: JSON.parse(JSON.stringify(DEFAULT_SAMPLE_DATA)),
+    data: JSON.parse(JSON.stringify(DEFAULT_DATA)),
     currentPage: 1,
     threshold: 0.85,
+    filterMode: "all", // "all", "low", "corrected"
+    searchQuery: "",
+    zoom: 1.0,
     selectedWordRef: null, // { pageNum, wordIndex }
     correctionCount: 0,
-    theme: localStorage.getItem("pdf_skill_theme") || "light",
-    scale: 1.0
+    theme: localStorage.getItem("pdf_extractor_theme") || "light"
   };
 
-  // DOM Elements
-  const elements = {
-    themeToggleBtn: document.getElementById("themeToggleBtn"),
-    thresholdSlider: document.getElementById("thresholdSlider"),
-    thresholdValBadge: document.getElementById("thresholdValBadge"),
-    metricTotalWords: document.getElementById("metricTotalWords"),
-    metricMeanConf: document.getElementById("metricMeanConf"),
-    metricLowConf: document.getElementById("metricLowConf"),
-    metricCorrections: document.getElementById("metricCorrections"),
-    metricFilename: document.getElementById("metricFilename"),
-    prevPageBtn: document.getElementById("prevPageBtn"),
-    nextPageBtn: document.getElementById("nextPageBtn"),
-    pageIndicator: document.getElementById("pageIndicator"),
-    docWrapper: document.getElementById("docWrapper"),
-    pageCanvas: document.getElementById("pageCanvas"),
-    overlayLayer: document.getElementById("overlayLayer"),
-    textStreamFlow: document.getElementById("textStreamFlow"),
-    auditTableBody: document.getElementById("auditTableBody"),
-    auditEmptyState: document.getElementById("auditEmptyState"),
-    inspectorCard: document.getElementById("inspectorCard"),
-    inspectorEmpty: document.getElementById("inspectorEmpty"),
-    inspWord: document.getElementById("inspWord"),
-    inspConf: document.getElementById("inspConf"),
-    inspSource: document.getElementById("inspSource"),
-    inspPage: document.getElementById("inspPage"),
-    inspBBox: document.getElementById("inspBBox"),
-    inspEditInput: document.getElementById("inspEditInput"),
-    applyCorrectionBtn: document.getElementById("applyCorrectionBtn"),
-    approveAsIsBtn: document.getElementById("approveAsIsBtn"),
-    fileInput: document.getElementById("fileInput"),
-    exportJsonBtn: document.getElementById("exportJsonBtn"),
-    viewJsonBtn: document.getElementById("viewJsonBtn"),
-    jsonModal: document.getElementById("jsonModal"),
-    closeModalBtn: document.getElementById("closeModalBtn"),
-    copyJsonBtn: document.getElementById("copyJsonBtn"),
-    modalJsonCode: document.getElementById("modalJsonCode"),
-    tabBtns: document.querySelectorAll(".tab-btn"),
-    tabContents: document.querySelectorAll(".tab-content")
-  };
+  // DOM Elements cache
+  let dom = {};
 
-  // Initialize Theme
-  function applyTheme(theme) {
-    state.theme = theme;
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("pdf_skill_theme", theme);
-    elements.themeToggleBtn.textContent = theme === "dark" ? "[Light Mode]" : "[Dark Mode]";
+  function queryElements() {
+    dom = {
+      themeToggleBtn: document.getElementById("themeToggleBtn"),
+      themeStatusLabel: document.getElementById("themeStatusLabel"),
+      thresholdSlider: document.getElementById("thresholdSlider"),
+      thresholdBadge: document.getElementById("thresholdBadge"),
+      presetChips: document.querySelectorAll(".preset-chip"),
+      filterBtns: document.querySelectorAll(".filter-btn"),
+      searchWordsInput: document.getElementById("searchWordsInput"),
+      kpiFilename: document.getElementById("kpiFilename"),
+      kpiTotalWords: document.getElementById("kpiTotalWords"),
+      kpiMeanConf: document.getElementById("kpiMeanConf"),
+      kpiLowConf: document.getElementById("kpiLowConf"),
+      kpiCorrections: document.getElementById("kpiCorrections"),
+      zoomInBtn: document.getElementById("zoomInBtn"),
+      zoomOutBtn: document.getElementById("zoomOutBtn"),
+      zoomResetBtn: document.getElementById("zoomResetBtn"),
+      zoomLabel: document.getElementById("zoomLabel"),
+      prevPageBtn: document.getElementById("prevPageBtn"),
+      nextPageBtn: document.getElementById("nextPageBtn"),
+      pageIndicator: document.getElementById("pageIndicator"),
+      sheetWrapper: document.getElementById("sheetWrapper"),
+      pdfCanvas: document.getElementById("pdfCanvas"),
+      overlayContainer: document.getElementById("overlayContainer"),
+      tabItems: document.querySelectorAll(".tab-item"),
+      tabPanes: document.querySelectorAll(".tab-pane-content"),
+      inspectorCard: document.getElementById("inspectorCard"),
+      inspectorEmpty: document.getElementById("inspectorEmpty"),
+      inspWordText: document.getElementById("inspWordText"),
+      inspConfScore: document.getElementById("inspConfScore"),
+      inspMeterFill: document.getElementById("inspMeterFill"),
+      inspSource: document.getElementById("inspSource"),
+      inspPage: document.getElementById("inspPage"),
+      inspBbox: document.getElementById("inspBbox"),
+      inspEditInput: document.getElementById("inspEditInput"),
+      applyCorrectionBtn: document.getElementById("applyCorrectionBtn"),
+      approveBtn: document.getElementById("approveBtn"),
+      prevIssueBtn: document.getElementById("prevIssueBtn"),
+      nextIssueBtn: document.getElementById("nextIssueBtn"),
+      tokenFlowContainer: document.getElementById("tokenFlowContainer"),
+      auditListContainer: document.getElementById("auditListContainer"),
+      auditEmptyState: document.getElementById("auditEmptyState"),
+      fileInput: document.getElementById("fileInput"),
+      loadSampleBtn: document.getElementById("loadSampleBtn"),
+      exportJsonBtn: document.getElementById("exportJsonBtn"),
+      viewJsonBtn: document.getElementById("viewJsonBtn"),
+      jsonModal: document.getElementById("jsonModal"),
+      closeModalBtn: document.getElementById("closeModalBtn"),
+      copyJsonBtn: document.getElementById("copyJsonBtn"),
+      jsonModalCode: document.getElementById("jsonModalCode")
+    };
+  }
+
+  // Apply Theme Function
+  function applyTheme(newTheme) {
+    state.theme = newTheme;
+    document.documentElement.setAttribute("data-theme", newTheme);
+    localStorage.setItem("pdf_extractor_theme", newTheme);
+
+    if (dom.themeToggleBtn) {
+      const isDark = newTheme === "dark";
+      dom.themeToggleBtn.setAttribute("aria-label", isDark ? "Switch to Light Mode" : "Switch to Dark Mode");
+      if (dom.themeStatusLabel) {
+        dom.themeStatusLabel.textContent = isDark ? "Light Mode" : "Dark Mode";
+      }
+    }
   }
 
   function toggleTheme() {
     applyTheme(state.theme === "dark" ? "light" : "dark");
   }
 
-  // Recalculate Low Confidence Words based on threshold
+  // Recalculate Metrics and Low Confidence Items
   function recalculateMetrics() {
     let lowConfCount = 0;
-    let totalConfidenceSum = 0;
-    let totalWordCount = 0;
+    let sumConfidence = 0;
+    let wordCount = 0;
     const lowConfList = [];
 
     state.data.pages.forEach(page => {
       page.words.forEach((w, idx) => {
-        totalWordCount++;
-        totalConfidenceSum += w.confidence;
+        wordCount++;
+        sumConfidence += w.confidence;
         if (w.confidence < state.threshold) {
           lowConfCount++;
           lowConfList.push({
@@ -910,8 +1304,7 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
             page: page.page_number,
             wordIndex: idx,
             source: w.source,
-            bbox: w.bbox,
-            reason: w.source === "ocr" ? "ocr_uncertainty" : "encoding_anomaly"
+            bbox: w.bbox
           });
         }
       });
@@ -920,45 +1313,43 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
     state.data.low_confidence_words = lowConfList;
     state.data.metadata.low_confidence_count = lowConfCount;
     state.data.metadata.low_confidence_threshold = state.threshold;
-    state.data.metadata.total_words = totalWordCount;
-    state.data.metadata.mean_confidence = totalWordCount > 0 ? Number((totalConfidenceSum / totalWordCount).toFixed(4)) : 1.0;
+    state.data.metadata.total_words = wordCount;
+    state.data.metadata.mean_confidence = wordCount > 0 ? Number((sumConfidence / wordCount).toFixed(4)) : 1.0;
 
-    // Update Header Strip
-    elements.metricTotalWords.textContent = totalWordCount;
-    elements.metricMeanConf.textContent = (state.data.metadata.mean_confidence * 100).toFixed(1) + "%";
-    elements.metricLowConf.textContent = lowConfCount;
-    elements.metricCorrections.textContent = state.correctionCount;
-    elements.metricFilename.textContent = state.data.metadata.filename || "document.pdf";
+    // Update KPI Card UI
+    if (dom.kpiTotalWords) dom.kpiTotalWords.textContent = wordCount;
+    if (dom.kpiMeanConf) dom.kpiMeanConf.textContent = (state.data.metadata.mean_confidence * 100).toFixed(1) + "%";
+    if (dom.kpiLowConf) dom.kpiLowConf.textContent = lowConfCount;
+    if (dom.kpiCorrections) dom.kpiCorrections.textContent = state.correctionCount;
+    if (dom.kpiFilename) dom.kpiFilename.textContent = state.data.metadata.filename || "document.pdf";
   }
 
-  // Render Visual Page and Word Overlays
+  // Render Visual Document Page & Overlays
   function renderVisualPage() {
     const pageIndex = state.currentPage - 1;
     const page = state.data.pages[pageIndex];
-    if (!page) return;
+    if (!page || !dom.pdfCanvas) return;
 
     const width = page.width || 612;
     const height = page.height || 792;
 
-    // Set Element Dimensions
-    elements.pageCanvas.width = width;
-    elements.pageCanvas.height = height;
-    elements.docWrapper.style.width = width + "px";
-    elements.docWrapper.style.height = height + "px";
+    dom.pdfCanvas.width = width;
+    dom.pdfCanvas.height = height;
+    dom.sheetWrapper.style.width = width + "px";
+    dom.sheetWrapper.style.height = height + "px";
+    dom.sheetWrapper.style.transform = `scale(${state.zoom})`;
 
-    const ctx = elements.pageCanvas.getContext("2d");
+    const ctx = dom.pdfCanvas.getContext("2d");
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, width, height);
 
-    // Draw Subtle Document Header Line
+    // Subtle Grid/Guide
     ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 1;
     ctx.strokeRect(20, 20, width - 40, height - 40);
 
-    // Draw Simulated Vector Text for Clean Appearance
+    // Render Vector Text
     ctx.fillStyle = "#1e293b";
-    ctx.font = "11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-
     page.words.forEach(w => {
       const box = w.bbox;
       const fontSize = Math.max(9, (box.bottom - box.top) * 0.85);
@@ -966,61 +1357,79 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
       ctx.fillText(w.word, box.x0, box.bottom - 2);
     });
 
-    // Clear and rebuild Bounding Box Overlays
-    elements.overlayLayer.innerHTML = "";
+    // Rebuild Bounding Box Overlays
+    dom.overlayContainer.innerHTML = "";
 
     page.words.forEach((w, idx) => {
+      // Filter matching
+      if (state.filterMode === "low" && w.confidence >= state.threshold) return;
+      if (state.filterMode === "corrected" && !w.human_corrected) return;
+      if (state.searchQuery && !w.word.toLowerCase().includes(state.searchQuery.toLowerCase())) return;
+
       const box = w.bbox;
       const boxEl = document.createElement("div");
-      boxEl.className = "word-bbox-highlight";
-      
-      const isLow = w.confidence < state.threshold;
-      boxEl.classList.add(isLow ? "low-confidence" : "high-confidence");
+      boxEl.className = "bbox-box";
 
-      if (state.selectedWordRef && state.selectedWordRef.pageNum === state.currentPage && state.selectedWordRef.wordIndex === idx) {
+      const isLow = w.confidence < state.threshold;
+      if (w.human_corrected) {
+        boxEl.classList.add("corrected");
+      } else if (isLow) {
+        boxEl.classList.add("low");
+      } else {
+        boxEl.classList.add("high");
+      }
+
+      const isSelected = state.selectedWordRef && state.selectedWordRef.pageNum === state.currentPage && state.selectedWordRef.wordIndex === idx;
+      if (isSelected) {
         boxEl.classList.add("selected");
       }
 
       boxEl.style.left = box.x0 + "px";
       boxEl.style.top = box.top + "px";
-      boxEl.style.width = Math.max(6, box.x1 - box.x0) + "px";
-      boxEl.style.height = Math.max(6, box.bottom - box.top) + "px";
-      boxEl.title = `${w.word} (Confidence: ${(w.confidence * 100).toFixed(1)}%)`;
+      boxEl.style.width = Math.max(8, box.x1 - box.x0) + "px";
+      boxEl.style.height = Math.max(8, box.bottom - box.top) + "px";
+      boxEl.title = `${w.word} (${(w.confidence * 100).toFixed(1)}%)`;
 
       boxEl.addEventListener("click", (e) => {
         e.stopPropagation();
         selectWord(state.currentPage, idx);
       });
 
-      elements.overlayLayer.appendChild(boxEl);
+      dom.overlayContainer.appendChild(boxEl);
     });
 
     // Update Pagination
-    elements.pageIndicator.textContent = `Page ${state.currentPage} of ${state.data.pages.length}`;
-    elements.prevPageBtn.disabled = state.currentPage <= 1;
-    elements.nextPageBtn.disabled = state.currentPage >= state.data.pages.length;
+    if (dom.pageIndicator) dom.pageIndicator.textContent = `Page ${state.currentPage} of ${state.data.pages.length}`;
+    if (dom.prevPageBtn) dom.prevPageBtn.disabled = state.currentPage <= 1;
+    if (dom.nextPageBtn) dom.nextPageBtn.disabled = state.currentPage >= state.data.pages.length;
+    if (dom.zoomLabel) dom.zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
   }
 
-  // Render Sequential Text Flow in Right Pane
+  // Render Document Text Flow in Right Pane
   function renderTextFlow() {
     const pageIndex = state.currentPage - 1;
     const page = state.data.pages[pageIndex];
-    if (!page) return;
+    if (!page || !dom.tokenFlowContainer) return;
 
-    elements.textStreamFlow.innerHTML = "";
+    dom.tokenFlowContainer.innerHTML = "";
 
     page.words.forEach((w, idx) => {
       const span = document.createElement("span");
-      span.className = "token-span";
+      span.className = "token-word";
       span.textContent = w.word;
 
       const isLow = w.confidence < state.threshold;
-      if (isLow) {
-        span.classList.add("token-low-conf");
+      if (w.human_corrected) {
+        span.classList.add("corrected");
+      } else if (isLow) {
+        span.classList.add("low");
+      } else {
+        span.classList.add("high");
       }
 
-      if (state.selectedWordRef && state.selectedWordRef.pageNum === state.currentPage && state.selectedWordRef.wordIndex === idx) {
-        span.classList.add("token-selected");
+      const isSelected = state.selectedWordRef && state.selectedWordRef.pageNum === state.currentPage && state.selectedWordRef.wordIndex === idx;
+      if (isSelected) {
+        span.classList.add("selected");
       }
 
       span.title = `Confidence: ${(w.confidence * 100).toFixed(1)}% | Source: ${w.source}`;
@@ -1029,41 +1438,46 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
         selectWord(state.currentPage, idx);
       });
 
-      elements.textStreamFlow.appendChild(span);
-      // Append a whitespace node
-      elements.textStreamFlow.appendChild(document.createTextNode(" "));
+      dom.tokenFlowContainer.appendChild(span);
+      dom.tokenFlowContainer.appendChild(document.createTextNode(" "));
     });
   }
 
-  // Render Audit Queue Table
+  // Render Audit Queue List
   function renderAuditQueue() {
-    elements.auditTableBody.innerHTML = "";
-    const lowConfList = state.data.low_confidence_words || [];
+    if (!dom.auditListContainer) return;
+    dom.auditListContainer.innerHTML = "";
+    const list = state.data.low_confidence_words || [];
 
-    if (lowConfList.length === 0) {
-      elements.auditEmptyState.style.display = "block";
+    if (list.length === 0) {
+      if (dom.auditEmptyState) dom.auditEmptyState.style.display = "block";
       return;
     }
 
-    elements.auditEmptyState.style.display = "none";
+    if (dom.auditEmptyState) dom.auditEmptyState.style.display = "none";
 
-    lowConfList.forEach((item, listIdx) => {
-      const tr = document.createElement("tr");
-      tr.className = "audit-row";
-      if (state.selectedWordRef && state.selectedWordRef.pageNum === item.page && state.selectedWordRef.wordIndex === item.wordIndex) {
-        tr.classList.add("selected");
+    list.forEach((item) => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "audit-item-row";
+      const isSelected = state.selectedWordRef && state.selectedWordRef.pageNum === item.page && state.selectedWordRef.wordIndex === item.wordIndex;
+      if (isSelected) {
+        itemEl.classList.add("selected");
       }
 
       const confPercent = (item.confidence * 100).toFixed(1) + "%";
 
-      tr.innerHTML = `
-        <td><span class="audit-word">${escapeHtml(item.word)}</span></td>
-        <td><span class="audit-conf metric-badge-low">${confPercent}</span></td>
-        <td>P.${item.page}</td>
-        <td><button class="btn btn-sm" data-action="jump">Inspect</button></td>
+      itemEl.innerHTML = `
+        <div>
+          <div class="audit-word-title">${escapeHtml(item.word)}</div>
+          <div class="audit-meta-info">Page ${item.page} | Source: ${item.source}</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="kpi-badge low">${confPercent}</span>
+          <button class="btn btn-sm" data-action="inspect">Inspect</button>
+        </div>
       `;
 
-      tr.querySelector('[data-action="jump"]').addEventListener("click", (e) => {
+      itemEl.querySelector('[data-action="inspect"]').addEventListener("click", (e) => {
         e.stopPropagation();
         if (state.currentPage !== item.page) {
           state.currentPage = item.page;
@@ -1071,68 +1485,67 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
         selectWord(item.page, item.wordIndex);
       });
 
-      tr.addEventListener("click", () => {
+      itemEl.addEventListener("click", () => {
         if (state.currentPage !== item.page) {
           state.currentPage = item.page;
         }
         selectWord(item.page, item.wordIndex);
       });
 
-      elements.auditTableBody.appendChild(tr);
+      dom.auditListContainer.appendChild(itemEl);
     });
   }
 
-  // Select a Word Token and Populate Inspector
+  // Select a Word Token
   function selectWord(pageNum, wordIndex) {
     state.selectedWordRef = { pageNum, wordIndex };
     const page = state.data.pages[pageNum - 1];
     if (!page || !page.words[wordIndex]) return;
 
-    const wordItem = page.words[wordIndex];
+    const item = page.words[wordIndex];
 
-    // Populate Inspector Card
-    elements.inspectorEmpty.style.display = "none";
-    elements.inspectorCard.style.display = "block";
+    if (dom.inspectorEmpty) dom.inspectorEmpty.style.display = "none";
+    if (dom.inspectorCard) dom.inspectorCard.style.display = "block";
 
-    elements.inspWord.textContent = wordItem.word;
-    elements.inspConf.textContent = (wordItem.confidence * 100).toFixed(1) + "%";
-    elements.inspConf.className = "inspector-val " + (wordItem.confidence < state.threshold ? "metric-badge-low" : "metric-badge-high");
-    elements.inspSource.textContent = wordItem.source;
-    elements.inspPage.textContent = pageNum;
-    elements.inspBBox.textContent = `[${wordItem.bbox.x0}, ${wordItem.bbox.top}, ${wordItem.bbox.x1}, ${wordItem.bbox.bottom}]`;
-    elements.inspEditInput.value = wordItem.word;
-    elements.inspEditInput.focus();
+    if (dom.inspWordText) dom.inspWordText.textContent = item.word;
+    const confScore = (item.confidence * 100).toFixed(1);
+    if (dom.inspConfScore) dom.inspConfScore.textContent = `${confScore}%`;
 
-    // Re-render views to apply .selected classes
+    // Meter bar color and fill
+    if (dom.inspMeterFill) {
+      dom.inspMeterFill.style.width = `${Math.max(5, confScore)}%`;
+      dom.inspMeterFill.style.backgroundColor = item.confidence >= state.threshold ? "var(--status-high-bar)" : "var(--status-low-bar)";
+    }
+
+    if (dom.inspSource) dom.inspSource.textContent = item.human_corrected ? "Human Verified" : item.source;
+    if (dom.inspPage) dom.inspPage.textContent = `Page ${pageNum}`;
+    if (dom.inspBbox) dom.inspBbox.textContent = `[${item.bbox.x0}, ${item.bbox.top}, ${item.bbox.x1}, ${item.bbox.bottom}]`;
+    if (dom.inspEditInput) {
+      dom.inspEditInput.value = item.word;
+      dom.inspEditInput.focus();
+    }
+
     renderVisualPage();
     renderTextFlow();
     renderAuditQueue();
   }
 
-  // Apply Human-in-the-Loop Correction
+  // Apply HITL Correction
   function applyCorrection() {
     if (!state.selectedWordRef) return;
     const { pageNum, wordIndex } = state.selectedWordRef;
     const page = state.data.pages[pageNum - 1];
     if (!page || !page.words[wordIndex]) return;
 
-    const newText = elements.inspEditInput.value.trim();
+    const newText = dom.inspEditInput.value.trim();
     if (!newText) return;
 
-    const wordItem = page.words[wordIndex];
-    if (wordItem.word !== newText) {
-      wordItem.word = newText;
-      wordItem.confidence = 1.0; // Human corrected token certainty
-      wordItem.source = "digital";
-      wordItem.human_corrected = true;
-      state.correctionCount++;
-    } else {
-      // Mark as approved even if unchanged
-      wordItem.confidence = 1.0;
-      wordItem.human_approved = true;
-    }
+    const item = page.words[wordIndex];
+    item.word = newText;
+    item.confidence = 1.0;
+    item.human_corrected = true;
+    state.correctionCount++;
 
-    // Rebuild full text string
     rebuildFullText();
     recalculateMetrics();
     renderVisualPage();
@@ -1147,15 +1560,37 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
     const page = state.data.pages[pageNum - 1];
     if (!page || !page.words[wordIndex]) return;
 
-    const wordItem = page.words[wordIndex];
-    wordItem.confidence = 1.0;
-    wordItem.human_approved = true;
+    const item = page.words[wordIndex];
+    item.confidence = 1.0;
+    item.human_approved = true;
 
     recalculateMetrics();
     renderVisualPage();
     renderTextFlow();
     renderAuditQueue();
     selectWord(pageNum, wordIndex);
+  }
+
+  function navigateIssues(direction) {
+    const list = state.data.low_confidence_words || [];
+    if (list.length === 0) return;
+
+    let currentIndex = -1;
+    if (state.selectedWordRef) {
+      currentIndex = list.findIndex(
+        item => item.page === state.selectedWordRef.pageNum && item.wordIndex === state.selectedWordRef.wordIndex
+      );
+    }
+
+    let nextIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex >= list.length) nextIndex = 0;
+    if (nextIndex < 0) nextIndex = list.length - 1;
+
+    const target = list[nextIndex];
+    if (target) {
+      state.currentPage = target.page;
+      selectWord(target.page, target.wordIndex);
+    }
   }
 
   function rebuildFullText() {
@@ -1165,17 +1600,24 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
     state.data.full_text = state.data.pages.map(p => p.text).join("\n\n");
   }
 
-  // Handle Threshold Slider Changes
-  function onThresholdChange(e) {
-    state.threshold = parseFloat(e.target.value);
-    elements.thresholdValBadge.textContent = (state.threshold * 100).toFixed(0) + "%";
+  // Preset Click Handler
+  function setThresholdPreset(val) {
+    state.threshold = val;
+    if (dom.thresholdSlider) dom.thresholdSlider.value = val;
+    if (dom.thresholdBadge) dom.thresholdBadge.textContent = `${Math.round(val * 100)}%`;
+
+    dom.presetChips.forEach(chip => {
+      const chipVal = parseFloat(chip.getAttribute("data-val"));
+      chip.classList.toggle("active", Math.abs(chipVal - val) < 0.005);
+    });
+
     recalculateMetrics();
     renderVisualPage();
     renderTextFlow();
     renderAuditQueue();
   }
 
-  // File Loader (Upload JSON)
+  // File Upload Handling
   function handleFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -1185,7 +1627,7 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
       try {
         const parsed = JSON.parse(event.target.result);
         if (!parsed.pages || !parsed.metadata) {
-          alert("Invalid extraction JSON format. Missing required fields.");
+          alert("Invalid extraction JSON format.");
           return;
         }
         state.data = parsed;
@@ -1193,8 +1635,9 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
         state.selectedWordRef = null;
         state.correctionCount = 0;
         state.threshold = parsed.metadata.low_confidence_threshold || 0.85;
-        elements.thresholdSlider.value = state.threshold;
-        elements.thresholdValBadge.textContent = (state.threshold * 100).toFixed(0) + "%";
+
+        if (dom.thresholdSlider) dom.thresholdSlider.value = state.threshold;
+        if (dom.thresholdBadge) dom.thresholdBadge.textContent = `${Math.round(state.threshold * 100)}%`;
 
         recalculateMetrics();
         renderVisualPage();
@@ -1226,20 +1669,20 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
   // View JSON Modal
   function openJsonModal() {
     recalculateMetrics();
-    elements.modalJsonCode.textContent = JSON.stringify(state.data, null, 2);
-    elements.jsonModal.classList.add("open");
+    if (dom.jsonModalCode) dom.jsonModalCode.textContent = JSON.stringify(state.data, null, 2);
+    if (dom.jsonModal) dom.jsonModal.classList.add("open");
   }
 
   function closeJsonModal() {
-    elements.jsonModal.classList.remove("open");
+    if (dom.jsonModal) dom.jsonModal.classList.remove("open");
   }
 
   function copyJsonToClipboard() {
-    const code = elements.modalJsonCode.textContent;
+    const code = dom.jsonModalCode.textContent;
     navigator.clipboard.writeText(code).then(() => {
-      elements.copyJsonBtn.textContent = "Copied!";
+      dom.copyJsonBtn.textContent = "Copied!";
       setTimeout(() => {
-        elements.copyJsonBtn.textContent = "Copy JSON";
+        dom.copyJsonBtn.textContent = "Copy JSON";
       }, 1500);
     });
   }
@@ -1249,70 +1692,139 @@ Account within 30 days of the invoice date.", "words": [{"word": "APEX", "confid
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  // Setup Event Listeners
-  function initEvents() {
-    elements.themeToggleBtn.addEventListener("click", toggleTheme);
-    elements.thresholdSlider.addEventListener("input", onThresholdChange);
-    elements.prevPageBtn.addEventListener("click", () => {
-      if (state.currentPage > 1) {
-        state.currentPage--;
-        renderVisualPage();
-        renderTextFlow();
-      }
-    });
-    elements.nextPageBtn.addEventListener("click", () => {
-      if (state.currentPage < state.data.pages.length) {
-        state.currentPage++;
-        renderVisualPage();
-        renderTextFlow();
-      }
-    });
+  // Event Listeners Registration
+  function registerEvents() {
+    // Theme Switcher
+    if (dom.themeToggleBtn) {
+      dom.themeToggleBtn.addEventListener("click", toggleTheme);
+    }
 
-    elements.applyCorrectionBtn.addEventListener("click", applyCorrection);
-    elements.approveAsIsBtn.addEventListener("click", approveAsIs);
-    elements.inspEditInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        applyCorrection();
-      }
-    });
+    // Threshold Slider
+    if (dom.thresholdSlider) {
+      dom.thresholdSlider.addEventListener("input", (e) => {
+        setThresholdPreset(parseFloat(e.target.value));
+      });
+    }
 
-    elements.fileInput.addEventListener("change", handleFileSelect);
-    elements.exportJsonBtn.addEventListener("click", exportJson);
-    elements.viewJsonBtn.addEventListener("click", openJsonModal);
-    elements.closeModalBtn.addEventListener("click", closeJsonModal);
-    elements.copyJsonBtn.addEventListener("click", copyJsonToClipboard);
-
-    // Tab Navigation
-    elements.tabBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        elements.tabBtns.forEach(b => b.classList.remove("active"));
-        elements.tabContents.forEach(c => c.classList.remove("active"));
-
-        btn.classList.add("active");
-        const tabId = btn.getAttribute("data-tab");
-        document.getElementById(tabId).classList.add("active");
+    // Preset Chips
+    dom.presetChips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        const val = parseFloat(chip.getAttribute("data-val"));
+        setThresholdPreset(val);
       });
     });
 
-    // Click outside modal to close
-    elements.jsonModal.addEventListener("click", (e) => {
-      if (e.target === elements.jsonModal) {
-        closeJsonModal();
-      }
+    // Filter Buttons (All, Low, Corrected)
+    dom.filterBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        dom.filterBtns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.filterMode = btn.getAttribute("data-filter");
+        renderVisualPage();
+      });
     });
+
+    // Search Input
+    if (dom.searchWordsInput) {
+      dom.searchWordsInput.addEventListener("input", (e) => {
+        state.searchQuery = e.target.value.trim();
+        renderVisualPage();
+      });
+    }
+
+    // Zoom Controls
+    if (dom.zoomInBtn) {
+      dom.zoomInBtn.addEventListener("click", () => {
+        state.zoom = Math.min(2.0, state.zoom + 0.15);
+        renderVisualPage();
+      });
+    }
+    if (dom.zoomOutBtn) {
+      dom.zoomOutBtn.addEventListener("click", () => {
+        state.zoom = Math.max(0.5, state.zoom - 0.15);
+        renderVisualPage();
+      });
+    }
+    if (dom.zoomResetBtn) {
+      dom.zoomResetBtn.addEventListener("click", () => {
+        state.zoom = 1.0;
+        renderVisualPage();
+      });
+    }
+
+    // Pagination
+    if (dom.prevPageBtn) {
+      dom.prevPageBtn.addEventListener("click", () => {
+        if (state.currentPage > 1) {
+          state.currentPage--;
+          renderVisualPage();
+          renderTextFlow();
+        }
+      });
+    }
+    if (dom.nextPageBtn) {
+      dom.nextPageBtn.addEventListener("click", () => {
+        if (state.currentPage < state.data.pages.length) {
+          state.currentPage++;
+          renderVisualPage();
+          renderTextFlow();
+        }
+      });
+    }
+
+    // HITL Actions
+    if (dom.applyCorrectionBtn) dom.applyCorrectionBtn.addEventListener("click", applyCorrection);
+    if (dom.approveBtn) dom.approveBtn.addEventListener("click", approveAsIs);
+    if (dom.inspEditInput) {
+      dom.inspEditInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") applyCorrection();
+      });
+    }
+    if (dom.prevIssueBtn) dom.prevIssueBtn.addEventListener("click", () => navigateIssues("prev"));
+    if (dom.nextIssueBtn) dom.nextIssueBtn.addEventListener("click", () => navigateIssues("next"));
+
+    // Tabs
+    dom.tabItems.forEach(tab => {
+      tab.addEventListener("click", () => {
+        dom.tabItems.forEach(t => t.classList.remove("active"));
+        dom.tabPanes.forEach(p => p.classList.remove("active"));
+        tab.classList.add("active");
+        const targetId = tab.getAttribute("data-tab");
+        const targetPane = document.getElementById(targetId);
+        if (targetPane) targetPane.classList.add("active");
+      });
+    });
+
+    // File Actions
+    if (dom.fileInput) dom.fileInput.addEventListener("change", handleFileSelect);
+    if (dom.exportJsonBtn) dom.exportJsonBtn.addEventListener("click", exportJson);
+    if (dom.viewJsonBtn) dom.viewJsonBtn.addEventListener("click", openJsonModal);
+    if (dom.closeModalBtn) dom.closeModalBtn.addEventListener("click", closeJsonModal);
+    if (dom.copyJsonBtn) dom.copyJsonBtn.addEventListener("click", copyJsonToClipboard);
+    if (dom.jsonModal) {
+      dom.jsonModal.addEventListener("click", (e) => {
+        if (e.target === dom.jsonModal) closeJsonModal();
+      });
+    }
   }
 
-  // Boot Application
+  // Initializer
   function init() {
+    queryElements();
     applyTheme(state.theme);
-    initEvents();
+    registerEvents();
     recalculateMetrics();
     renderVisualPage();
     renderTextFlow();
     renderAuditQueue();
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  // Guaranteed Execution regardless of readyState
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
 
 </script>

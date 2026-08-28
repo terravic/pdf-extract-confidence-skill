@@ -162,7 +162,7 @@ class TestPDFConfidenceExtractor:
 
         content = generated_path.read_text(encoding="utf-8")
         assert "<!DOCTYPE html>" in content
-        assert "PDF Extraction & Confidence Reviewer" in content
+        assert "Word-Level Confidence Reviewer" in content
         assert "sample_digital_invoice.pdf" in content
         assert "thresholdSlider" in content
         assert "themeToggleBtn" in content

@@ -351,10 +351,13 @@ class PDFConfidenceExtractor:
             from PIL import Image
 
             doc = pdfium.PdfDocument(pdf_path)
-            p = doc[page_number - 1]
-            scale_factor = max(1.0, float(self.dpi) / 72.0)
-            bitmap = p.render(scale=scale_factor)
-            pil_image = bitmap.to_pil()
+            try:
+                p = doc[page_number - 1]
+                scale_factor = max(1.0, float(self.dpi) / 72.0)
+                bitmap = p.render(scale=scale_factor)
+                pil_image = bitmap.to_pil()
+            finally:
+                doc.close()
         except Exception as ex:
             logger.warning("Failed to render page %d with pypdfium2: %s", page_number, ex)
 

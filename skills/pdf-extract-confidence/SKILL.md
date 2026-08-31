@@ -13,6 +13,18 @@ description: >-
 
 This skill provides an automated workflow to process PDF files, extract character and word tokens, compute normalized confidence scores (0.0 to 1.0) for every word, and generate a standardized JSON document.
 
+## Prerequisites and OCR Engine Setup
+
+Digital vector PDFs work out-of-the-box with standard Python libraries. For scanned PDFs (raster images without a digital text layer), an OCR engine must be available:
+
+- **macOS (Homebrew)**: `brew install tesseract`
+- **Debian / Ubuntu / Docker**: `sudo apt-get update && sudo apt-get install -y tesseract-ocr`
+- **Fedora / RHEL**: `sudo dnf install -y tesseract`
+- **Windows (winget)**: `winget install UB-Mannheim.TesseractOCR`
+- **Python / Rootless Environments**: `pip install rapidocr-onnxruntime` (pure-Python ONNX engine requiring no system root permissions).
+
+If Tesseract is installed in a non-standard path, specify it via the `--tesseract-cmd /path/to/tesseract` argument or set the `TESSERACT_CMD` environment variable.
+
 ## Procedure for the Agent
 
 Follow these sequential steps when a user requests PDF text extraction with confidence scoring.
@@ -25,10 +37,7 @@ Follow these sequential steps when a user requests PDF text extraction with conf
    - `auto` (default): Automatically detects digital text vs image/scanned pages.
    - `digital`: Fast vector text extraction only.
    - `ocr`: Optical character recognition on rendered page images.
-4. For scanned documents (or image-only pages):
-   - The extraction engine uses **Tesseract OCR** (system binary `tesseract`) or **RapidOCR** (pure-Python ONNX).
-   - If installed in an agent container or environment, ensure `tesseract-ocr` (`apt-get install -y tesseract-ocr` or `brew install tesseract`) or `rapidocr-onnxruntime` is available.
-   - You can explicitly point to the binary using `--tesseract-cmd /path/to/tesseract` or setting `export TESSERACT_CMD=...`.
+4. For scanned documents, verify OCR engine availability or pass `--tesseract-cmd` if using a custom binary path.
 5. Determine the target output JSON file path. If the user did not specify an output file, generate an output file named `<basename>_extracted.json` in the same directory or current workspace.
 
 ### Step 2: Execute the Extraction Script
@@ -92,6 +101,20 @@ The generated JSON file accommodates two distinct downstream consumer types:
 1. **Full-Text Consumers**: Direct NLP or LLM ingestion can access the `full_text` field or `pages[i].text` without traversing word arrays.
 2. **Verification & Audit Consumers**: Human-in-the-loop review systems can inspect `low_confidence_words` or iterate over `pages[i].words` to render bounding boxes (`bbox`) over page images for interactive review.
 
+## Verification and Testing
+
+To verify that the skill, its dependencies, and OCR engine are properly installed and functioning, run the standard library Python unit test suite:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Or run individual test modules directly:
+```bash
+python3 tests/test_extractor.py
+python3 tests/test_schema.py
+```
+
 ## References and Resources
 
 - Extraction Script: [extract_pdf.py](skills/pdf-extract-confidence/scripts/extract_pdf.py)
@@ -103,3 +126,4 @@ The generated JSON file accommodates two distinct downstream consumer types:
 - Sample Output Example: [sample_output.json](skills/pdf-extract-confidence/resources/sample_output.json)
 - Confidence Methodology: [confidence_scoring.md](skills/pdf-extract-confidence/references/confidence_scoring.md)
 - Cloud Engine Adapters: [cloud_adapters.md](skills/pdf-extract-confidence/references/cloud_adapters.md)
+- Unit Tests: [test_extractor.py](tests/test_extractor.py) and [test_schema.py](tests/test_schema.py)

@@ -12,6 +12,9 @@ An agent skill and standalone Python tool designed for conversational AI agents,
 2. System Architecture
 3. Directory Structure
 4. Installation and Setup
+   - Prerequisites and OCR Engine Setup
+   - Install Dependencies
+   - Verify Installation
 5. How to Use the Python Code
    - Command Line Interface (CLI)
    - Python Library API
@@ -31,9 +34,11 @@ An agent skill and standalone Python tool designed for conversational AI agents,
    - Real-World Prompt Examples & Workflows
    - Sample Agent Conversation and Output
    - How to Use the Visual Dashboard for Corrections
-8. Synthetic Test Data
+8. Sample and Test Documents
 9. JSON Output Schema Reference
 10. Running the Test Suite
+   - Option A: Standard Python unittest (Built-in)
+   - Option B: Using pytest
 11. License and Contribution
 
 ---
@@ -118,15 +123,30 @@ pdf-extract-confidence-skill/
 
 ### Prerequisites
 - Python 3.9 or higher.
-- **OCR Engine (for scanned raster documents and pure scans)**:
-  - **Tesseract OCR (Recommended)**:
-    - Debian/Ubuntu: `sudo apt-get install -y tesseract-ocr`
-    - Fedora/RHEL: `sudo dnf install -y tesseract`
-    - macOS (Homebrew): `brew install tesseract`
-    - Windows: `winget install UB-Mannheim.TesseractOCR`
-    - Docker / Agent Harness Container: Add `RUN apt-get update && apt-get install -y tesseract-ocr` to your Dockerfile.
-  - **Pure-Python ONNX Engine (Fallback / Rootless environments)**:
-    - Install `rapidocr-onnxruntime` via `pip install rapidocr-onnxruntime`. This runs OCR via ONNX Runtime without needing system root/apt permissions or C++ binaries.
+- **OCR Engine (required for scanned raster PDFs and image-only documents)**:
+  - **macOS (Homebrew)**:
+    ```bash
+    brew install tesseract
+    ```
+  - **Debian / Ubuntu / Docker**:
+    ```bash
+    sudo apt-get update && sudo apt-get install -y tesseract-ocr
+    ```
+  - **Fedora / RHEL / CentOS**:
+    ```bash
+    sudo dnf install -y tesseract
+    ```
+  - **Windows (winget / Chocolatey)**:
+    ```powershell
+    winget install UB-Mannheim.TesseractOCR
+    # or with Chocolatey:
+    choco install tesseract
+    ```
+  - **Python / Rootless Environments (No System Binary Needed)**:
+    ```bash
+    pip install rapidocr-onnxruntime
+    ```
+    This pure-Python engine runs via ONNX Runtime without requiring administrative root permissions or external C++ binaries.
 
 ### Install Dependencies
 
@@ -138,6 +158,20 @@ To install development and optional OCR dependencies:
 
 ```bash
 pip install -e ".[dev,ocr]"
+```
+
+### Verify Installation
+
+Run the test suite to confirm everything is working properly:
+
+```bash
+pytest -v tests/
+```
+
+Or using standard Python built-in `unittest`:
+
+```bash
+python3 -m unittest discover -s tests -v
 ```
 
 ---
@@ -326,9 +360,10 @@ This skill automatically evaluates every single word in your document and scores
 ### What the Skill Needs to Run
 
 To use this skill in an AI chat window, you only need to provide:
-1. **Your PDF File**: Either upload the PDF file directly to the chat, or provide the filename/path if it is already in your workspace (for example, `samples/sample_digital_invoice.pdf`).
+1. **Your PDF File**: Either upload the PDF file directly to the chat, or provide the filename/path if it is already in your workspace (for example, `samples/sample_digital_invoice.pdf` or `samples/104-10062-10073.pdf`).
 2. **Your Goal in Plain English**: Tell the AI what you want to do (for example, extract the text, check for low-confidence words, or generate a visual dashboard).
 3. **(Optional) Quality Cutoff**: If you have a specific accuracy requirement (such as "flag anything below 90% confidence"), mention it in your prompt.
+4. **(For Scanned Documents Only)**: If your document is a scan with no digital text layer, an OCR engine (such as Tesseract or the pure-Python RapidOCR engine) must be installed in the agent environment (`brew install tesseract` on macOS, `sudo apt-get install tesseract-ocr` on Linux, or `winget install UB-Mannheim.TesseractOCR` on Windows).
 
 ---
 
@@ -376,6 +411,9 @@ Here are sample prompts you can copy and paste directly into your AI chat window
 
 #### Example 4: Compliance and Multi-Page Sign-Off Verification
 > "Analyze `samples/sample_mixed_report.pdf` in auto mode. Tell me the average confidence score across all pages, check whether the compliance stamp on page 2 was read accurately, and save the result to `audit_report.json`."
+
+#### Example 5: Historical Scanned Record OCR and Audit Queue
+> "Run the confidence extraction skill on `samples/104-10062-10073.pdf` using OCR mode at 85% threshold. Generate the interactive review dashboard so I can review flagged tokens in the audit queue."
 
 ---
 
@@ -524,9 +562,54 @@ Field | Type | Description
 
 ## 10. Running the Test Suite
 
-The project includes an automated test suite verifying digital extraction, scanned/raster extraction, confidence scoring boundaries, threshold filtering, CLI execution, HTML dashboard generation, and JSON schema compliance.
+The project includes an automated test suite verifying digital extraction, scanned/raster OCR extraction, confidence scoring boundaries, threshold filtering, CLI execution, HTML dashboard generation, and JSON schema compliance.
 
-Run all tests using `pytest`:
+The tests are written using Python's standard library `unittest` framework, so they run out-of-the-box without requiring third-party test runners, while remaining fully compatible with `pytest`.
+
+### Option A: Standard Python `unittest` (Built-in)
+
+Run all tests using Python's standard library `unittest` test discovery:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Or run individual test modules directly:
+
+```bash
+python3 tests/test_extractor.py
+python3 tests/test_schema.py
+```
+
+Expected Output:
+```text
+test_cli_execution (test_extractor.TestPDFConfidenceExtractor.test_cli_execution) ... ok
+test_cli_execution_with_html_output (test_extractor.TestPDFConfidenceExtractor.test_cli_execution_with_html_output) ... ok
+test_cli_execution_with_ocr_flags (test_extractor.TestPDFConfidenceExtractor.test_cli_execution_with_ocr_flags) ... ok
+test_custom_threshold_filtering (test_extractor.TestPDFConfidenceExtractor.test_custom_threshold_filtering) ... ok
+test_digital_invoice_extraction (test_extractor.TestPDFConfidenceExtractor.test_digital_invoice_extraction) ... ok
+test_digital_word_encoding_evaluation (test_extractor.TestPDFConfidenceExtractor.test_digital_word_encoding_evaluation) ... ok
+test_file_not_found (test_extractor.TestPDFConfidenceExtractor.test_file_not_found) ... ok
+test_generate_html_dashboard (test_extractor.TestPDFConfidenceExtractor.test_generate_html_dashboard) ... ok
+test_missing_ocr_fallback_handling (test_extractor.TestPDFConfidenceExtractor.test_missing_ocr_fallback_handling) ... ok
+test_mixed_report_extraction (test_extractor.TestPDFConfidenceExtractor.test_mixed_report_extraction) ... ok
+test_ocr_scan_jfk_document (test_extractor.TestPDFConfidenceExtractor.test_ocr_scan_jfk_document) ... ok
+test_scanned_receipt_extraction (test_extractor.TestPDFConfidenceExtractor.test_scanned_receipt_extraction) ... ok
+test_invalid_confidence_range_rejected (test_schema.TestSchemaValidation.test_invalid_confidence_range_rejected) ... ok
+test_invalid_structure_rejected (test_schema.TestSchemaValidation.test_invalid_structure_rejected) ... ok
+test_schema_file_exists (test_schema.TestSchemaValidation.test_schema_file_exists) ... ok
+test_valid_digital_output_passes_validation (test_schema.TestSchemaValidation.test_valid_digital_output_passes_validation) ... ok
+test_valid_mixed_output_passes_validation (test_schema.TestSchemaValidation.test_valid_mixed_output_passes_validation) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 32.892s
+
+OK
+```
+
+### Option B: Using `pytest`
+
+If you have `pytest` installed, you can also run:
 
 ```bash
 pytest -v tests/

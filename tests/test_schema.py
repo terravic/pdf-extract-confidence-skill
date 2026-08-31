@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
-import pytest
+import subprocess
+import unittest
 
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "skills" / "pdf-extract-confidence" / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
@@ -13,12 +14,20 @@ from extract_pdf import (
 
 SAMPLES_DIR = Path(__file__).resolve().parent.parent / "samples"
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "skills" / "pdf-extract-confidence" / "resources" / "schema.json"
+GEN_SCRIPT = SCRIPTS_DIR / "generate_samples.py"
 
 
-class TestSchemaValidation:
+class TestSchemaValidation(unittest.TestCase):
+    """Test suite validating JSON output compliance against schema.json."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Ensure sample test PDFs exist before test execution."""
+        if not (SAMPLES_DIR / "sample_digital_invoice.pdf").exists():
+            subprocess.run([sys.executable, str(GEN_SCRIPT)], check=True)
 
     def test_schema_file_exists(self):
-        assert SCHEMA_PATH.exists()
+        self.assertTrue(SCHEMA_PATH.exists())
 
     def test_valid_digital_output_passes_validation(self):
         extractor = PDFConfidenceExtractor()
@@ -26,7 +35,7 @@ class TestSchemaValidation:
         output_dict = result.to_dict()
 
         is_valid, error = validate_against_schema(output_dict, SCHEMA_PATH)
-        assert is_valid, f"Validation failed: {error}"
+        self.assertTrue(is_valid, f"Validation failed: {error}")
 
     def test_valid_mixed_output_passes_validation(self):
         extractor = PDFConfidenceExtractor()
@@ -34,7 +43,7 @@ class TestSchemaValidation:
         output_dict = result.to_dict()
 
         is_valid, error = validate_against_schema(output_dict, SCHEMA_PATH)
-        assert is_valid, f"Validation failed: {error}"
+        self.assertTrue(is_valid, f"Validation failed: {error}")
 
     def test_invalid_structure_rejected(self):
         # Missing required metadata
@@ -45,8 +54,8 @@ class TestSchemaValidation:
             "low_confidence_words": [],
         }
         is_valid, error = validate_against_schema(invalid_dict, SCHEMA_PATH)
-        assert not is_valid
-        assert error is not None
+        self.assertFalse(is_valid)
+        self.assertIsNotNone(error)
 
     def test_invalid_confidence_range_rejected(self):
         valid_dict = {
@@ -84,4 +93,9 @@ class TestSchemaValidation:
             "low_confidence_words": [],
         }
         is_valid, error = validate_against_schema(valid_dict, SCHEMA_PATH)
-        assert not is_valid
+        self.assertFalse(is_valid)
+
+
+if __name__ == "__main__":
+    unittest.main()
+

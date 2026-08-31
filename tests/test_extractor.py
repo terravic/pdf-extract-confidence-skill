@@ -205,3 +205,72 @@ class TestPDFConfidenceExtractor:
         assert output_json.exists()
         assert output_html.exists()
         assert output_html.stat().st_size > 10000
+
+    def test_ocr_scan_jfk_document(self):
+        jfk_pdf = SAMPLES_DIR / "104-10062-10073.pdf"
+        if not jfk_pdf.exists():
+            pytest.skip("Sample 104-10062-10073.pdf not found in samples/")
+
+        extractor = PDFConfidenceExtractor(default_threshold=0.85)
+        if not extractor.tesseract_cmd:
+            pytest.skip("Tesseract OCR binary not found on test machine")
+
+        result = extractor.extract(jfk_pdf, threshold=0.85, mode="auto")
+
+        assert result.filename == "104-10062-10073.pdf"
+        assert len(result.pages) == 6
+        assert result.total_words > 1000
+        assert 0.80 <= result.mean_confidence <= 1.0
+        assert result.low_confidence_count > 0
+
+        # Verify page 1 word properties
+        p1 = result.pages[0]
+        assert p1.page_type == "ocr"
+        assert len(p1.words) > 100
+        for w in p1.words:
+            assert 0.0 <= w.confidence <= 1.0
+            assert w.bbox.x0 >= 0
+            assert w.bbox.top >= 0
+            assert w.bbox.x1 >= w.bbox.x0
+            assert w.bbox.bottom >= w.bbox.top
+            assert w.source == "ocr"
+
+        # Validate against JSON schema
+        valid, err = validate_against_schema(result.to_dict())
+        assert valid, f"Schema validation failed on OCR output: {err}"
+
+    def test_missing_ocr_fallback_handling(self):
+        # Create an extractor with invalid tesseract command to test graceful fallback
+        extractor = PDFConfidenceExtractor(tesseract_cmd="/non_existent_path_tesseract_xyz")
+        # Ensure RapidOCR won't be used during fallback test
+        extractor._rapidocr_engine = False
+
+        jfk_pdf = SAMPLES_DIR / "104-10062-10073.pdf"
+        if not jfk_pdf.exists():
+            pytest.skip("Sample 104-10062-10073.pdf not found")
+
+        result = extractor.extract(jfk_pdf, mode="ocr")
+        assert len(result.pages) == 6
+        for p in result.pages:
+            assert p.page_type == "ocr"
+            assert "OCR engine required" in p.text or p.word_count >= 0
+
+    def test_cli_execution_with_ocr_flags(self, tmp_path):
+        jfk_pdf = SAMPLES_DIR / "104-10062-10073.pdf"
+        if not jfk_pdf.exists():
+            pytest.skip("Sample 104-10062-10073.pdf not found")
+
+        output_json = tmp_path / "jfk_extracted.json"
+        cmd = [
+            sys.executable,
+            str(EXTRACT_SCRIPT),
+            "--input", str(jfk_pdf),
+            "--output", str(output_json),
+            "--dpi", "150",
+            "--threshold", "0.85",
+            "--validate",
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        assert res.returncode == 0
+        assert output_json.exists()
+

@@ -1,6 +1,6 @@
 # PDF Word-Level Confidence Extraction Skill
 
-An agent skill and standalone Python tool designed for Gemini Enterprise App, Antigravity, and other standard agent harnesses. It extracts text from PDF documents (digital vector, scanned raster, or hybrid), computes normalized per-word confidence scores in the range [0.0, 1.0], outputs structured JSON, and provides an interactive UI Dashboard for visual verification and human-in-the-loop correction.
+An agent skill and standalone Python tool designed for conversational AI agents, LLM tool-use systems, and autonomous agent harnesses. It extracts text from PDF documents (digital vector, scanned raster, or hybrid), computes normalized per-word confidence scores in the range [0.0, 1.0], outputs structured JSON, and provides an interactive UI Dashboard for visual verification and human-in-the-loop correction.
 
 ![PDF Word-Level Confidence Extraction Skill Architecture & Workflow](assets/skill_workflow_diagram.jpg)
 
@@ -48,7 +48,7 @@ This project delivers:
 - Dual-Purpose JSON Output: Contains both consolidated full text for immediate NLP/LLM ingestion and a structured word-by-word array with coordinates (`bbox`) for audit trails.
 - Low-Confidence Flagging: Automatically isolates words scoring below a configurable cutoff threshold (default: 0.85) into a dedicated audit array.
 - Interactive UI Dashboard: A responsive HTML/CSS/JavaScript interface featuring dynamic threshold sliders, visual PDF page bounding boxes, light/dark themes, and human-in-the-loop editing.
-- Multi-Harness Compatibility: Packaged as a standard Skill (`skills/pdf-extract-confidence/SKILL.md`) that works seamlessly in Gemini Enterprise App, Antigravity, and standard Skill Plug-in environments.
+- Multi-Harness Compatibility: Packaged as a standard Skill (`skills/pdf-extract-confidence/SKILL.md`) that works seamlessly across standard agent harnesses, IDE extensions, and skill plugin environments.
 
 ---
 
@@ -94,6 +94,9 @@ pdf-extract-confidence-skill/
 │           ├── confidence_scoring.md      # Confidence scoring methodology
 │           └── cloud_adapters.md          # Cloud Document AI and AWS Textract guide
 ├── samples/
+│   ├── 104-10062-10073.pdf                # Scanned historical record PDF (pure scan)
+│   ├── 104-10062-10073_extracted.json     # Extracted JSON with OCR word confidences
+│   ├── 104-10062-10073_dashboard.html     # Interactive review dashboard for scan
 │   ├── sample_digital_invoice.pdf         # Synthetic digital invoice (0% PHI)
 │   ├── sample_digital_invoice_extracted.json
 │   ├── sample_digital_invoice_dashboard.html
@@ -105,7 +108,7 @@ pdf-extract-confidence-skill/
 │   └── sample_scanned_receipt_dashboard.html
 └── tests/
     ├── __init__.py
-    ├── test_extractor.py                  # Unit, CLI, and Dashboard integration tests
+    ├── test_extractor.py                  # Unit, CLI, OCR, and Dashboard integration tests
     └── test_schema.py                     # Schema validation tests
 ```
 
@@ -115,7 +118,15 @@ pdf-extract-confidence-skill/
 
 ### Prerequisites
 - Python 3.9 or higher.
-- Optional: Tesseract OCR (if processing local scanned-image PDFs with local OCR engine).
+- **OCR Engine (for scanned raster documents and pure scans)**:
+  - **Tesseract OCR (Recommended)**:
+    - Debian/Ubuntu: `sudo apt-get install -y tesseract-ocr`
+    - Fedora/RHEL: `sudo dnf install -y tesseract`
+    - macOS (Homebrew): `brew install tesseract`
+    - Windows: `winget install UB-Mannheim.TesseractOCR`
+    - Docker / Agent Harness Container: Add `RUN apt-get update && apt-get install -y tesseract-ocr` to your Dockerfile.
+  - **Pure-Python ONNX Engine (Fallback / Rootless environments)**:
+    - Install `rapidocr-onnxruntime` via `pip install rapidocr-onnxruntime`. This runs OCR via ONNX Runtime without needing system root/apt permissions or C++ binaries.
 
 ### Install Dependencies
 
@@ -123,10 +134,10 @@ pdf-extract-confidence-skill/
 pip install -r requirements.txt
 ```
 
-To install development and test dependencies:
+To install development and optional OCR dependencies:
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[dev,ocr]"
 ```
 
 ---
@@ -189,6 +200,8 @@ Option | Type | Default | Description
 `--html-output` | String | None | Path to generate a standalone interactive HTML dashboard.
 `-t, --threshold` | Float | `0.85` | Cutoff score in range [0.0, 1.0] for low-confidence audit list.
 `-m, --mode` | String | `auto` | Extraction modality: `auto`, `digital`, or `ocr`.
+`--tesseract-cmd` | String | None | Explicit path to Tesseract binary (or set via `TESSERACT_CMD` env var).
+`--dpi` | Integer | `200` | Rendering resolution (DPI) for rasterizing pages before OCR.
 `--validate` | Flag | `False` | Validates generated JSON against `resources/schema.json`.
 `--compact` | Flag | `False` | Produces unformatted compact JSON instead of indented output.
 
@@ -298,7 +311,7 @@ The UI Dashboard (`skills/pdf-extract-confidence/ui/index.html`) is a responsive
 
 ## 7. Non-Technical User Guide: Using the Skill in an Agent Harness
 
-This section is written for non-technical users, analysts, compliance officers, and business operations specialists who want to use this skill through conversational AI agent assistants (such as Gemini Enterprise App, Antigravity, or other enterprise agent workspaces).
+This section is written for non-technical users, analysts, compliance officers, and business operations specialists who want to use this skill through conversational AI agent assistants and enterprise agent workspaces.
 
 ### Overview for Non-Technical Users
 
@@ -323,7 +336,7 @@ To use this skill in an AI chat window, you only need to provide:
 
 Follow these simple steps:
 
-1. **Step 1: Open the Chat Interface**: Open your AI assistant chat window (Gemini Enterprise App, Antigravity, or web workspace).
+1. **Step 1: Open the Chat Interface**: Open your AI assistant chat window or agent workspace.
 2. **Step 2: Attach Your PDF Document**: Drag and drop your PDF into the chat box or type its name.
 3. **Step 3: Ask the Agent**: Type your request using natural language (see the prompt examples below).
 4. **Step 4: Review the AI Summary**: The AI processes the document and reports:
@@ -415,20 +428,20 @@ If your document contains scanned pages or words scoring below the cutoff thresh
 
 ---
 
-## 8. Synthetic Test Data
+## 8. Sample and Test Documents
 
-All sample files in the `samples/` directory are generated programmatically and contain 100% synthetic, fictitious data. They contain no Protected Health Information (PHI) and no Personally Identifiable Information (PII).
+The `samples/` directory contains both synthetic test documents and real scanned record samples:
 
-To regenerate the sample files at any time, run:
+- `samples/104-10062-10073.pdf`: A 6-page scanned historical government record (pure raster scans with zero digital vector text) used to test OCR recognition, coordinate mapping, and low-confidence token isolation.
+- `samples/sample_digital_invoice.pdf`: A clean vector PDF invoice containing header details, customer ID, itemized tables, and payment instructions.
+- `samples/sample_scanned_receipt.pdf`: A rasterized simulated receipt with subtle rotation and blur artifacts to test OCR behavior.
+- `samples/sample_mixed_report.pdf`: A two-page corporate infrastructure report containing digital text and an embedded approval stamp image.
+
+To regenerate the synthetic sample files at any time, run:
 
 ```bash
 python3 skills/pdf-extract-confidence/scripts/generate_samples.py
 ```
-
-Generated Sample Files:
-- `samples/sample_digital_invoice.pdf`: A clean vector PDF invoice containing header details, customer ID, itemized tables, and payment instructions.
-- `samples/sample_scanned_receipt.pdf`: A rasterized simulated receipt with subtle rotation and blur artifacts to test OCR behavior.
-- `samples/sample_mixed_report.pdf`: A two-page corporate infrastructure report containing digital text and an embedded approval stamp image.
 
 ---
 
@@ -530,6 +543,9 @@ tests/test_extractor.py::TestPDFConfidenceExtractor::test_file_not_found PASSED
 tests/test_extractor.py::TestPDFConfidenceExtractor::test_cli_execution PASSED
 tests/test_extractor.py::TestPDFConfidenceExtractor::test_generate_html_dashboard PASSED
 tests/test_extractor.py::TestPDFConfidenceExtractor::test_cli_execution_with_html_output PASSED
+tests/test_extractor.py::TestPDFConfidenceExtractor::test_ocr_scan_jfk_document PASSED
+tests/test_extractor.py::TestPDFConfidenceExtractor::test_missing_ocr_fallback_handling PASSED
+tests/test_extractor.py::TestPDFConfidenceExtractor::test_cli_execution_with_ocr_flags PASSED
 tests/test_schema.py::TestSchemaValidation::test_schema_file_exists PASSED
 tests/test_schema.py::TestSchemaValidation::test_valid_digital_output_passes_validation PASSED
 tests/test_schema.py::TestSchemaValidation::test_valid_mixed_output_passes_validation PASSED

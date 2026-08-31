@@ -17,7 +17,7 @@ This skill provides an automated workflow to process PDF files, extract characte
 
 Follow these sequential steps when a user requests PDF text extraction with confidence scoring.
 
-### Step 1: Identify Input PDF and Parameters
+### Step 1: Identify Input PDF, Parameters, and OCR Availability
 
 1. Locate the relative path to the target PDF file requested by the user.
 2. Determine if the user specified a custom confidence threshold (default is 0.85).
@@ -25,7 +25,11 @@ Follow these sequential steps when a user requests PDF text extraction with conf
    - `auto` (default): Automatically detects digital text vs image/scanned pages.
    - `digital`: Fast vector text extraction only.
    - `ocr`: Optical character recognition on rendered page images.
-4. Determine the target output JSON file path. If the user did not specify an output file, generate an output file named `<basename>_extracted.json` in the same directory or current workspace.
+4. For scanned documents (or image-only pages):
+   - The extraction engine uses **Tesseract OCR** (system binary `tesseract`) or **RapidOCR** (pure-Python ONNX).
+   - If installed in an agent container or environment, ensure `tesseract-ocr` (`apt-get install -y tesseract-ocr` or `brew install tesseract`) or `rapidocr-onnxruntime` is available.
+   - You can explicitly point to the binary using `--tesseract-cmd /path/to/tesseract` or setting `export TESSERACT_CMD=...`.
+5. Determine the target output JSON file path. If the user did not specify an output file, generate an output file named `<basename>_extracted.json` in the same directory or current workspace.
 
 ### Step 2: Execute the Extraction Script
 
@@ -33,9 +37,9 @@ Run the extraction script using the Python CLI tool:
 
 ```bash
 python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
-  --input "samples/sample_digital_invoice.pdf" \
-  --output "output.json" \
-  --html-output "dashboard.html" \
+  --input "samples/104-10062-10073.pdf" \
+  --output "samples/104-10062-10073_extracted.json" \
+  --html-output "samples/104-10062-10073_dashboard.html" \
   --threshold 0.85 \
   --mode auto \
   --validate
@@ -47,6 +51,8 @@ Key CLI flags:
 - `--html-output PATH`: Generates a standalone interactive HTML dashboard embedding the extraction data.
 - `-t, --threshold FLOAT`: Cutoff for low confidence flagging (default: 0.85).
 - `-m, --mode [auto|digital|ocr]`: Extraction pipeline modality.
+- `--tesseract-cmd PATH`: Custom path to the Tesseract executable if not in system PATH.
+- `--dpi INT`: Rendering resolution for rasterizing pages before OCR (default: 200).
 - `--validate`: Validates output against the resource schema.
 - `--compact`: Generates compact unformatted JSON instead of indented formatting.
 

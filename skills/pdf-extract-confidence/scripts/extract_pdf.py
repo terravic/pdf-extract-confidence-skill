@@ -188,18 +188,56 @@ class PDFConfidenceExtractor:
         self,
         default_threshold: float = 0.85,
         tesseract_cmd: Optional[str] = None,
+        dpi: int = 200,
     ):
         self.default_threshold = default_threshold
-        self.tesseract_cmd = tesseract_cmd or self._find_tesseract()
+        self.dpi = dpi
+        self.tesseract_cmd = tesseract_cmd or os.environ.get("TESSERACT_CMD") or self._find_tesseract()
+        self._rapidocr_engine = None
 
     def _find_tesseract(self) -> Optional[str]:
-        """Locate Tesseract executable on the system path."""
+        """Locate Tesseract executable on the system path or standard locations."""
         import shutil
+        # Check standard PATH candidates
         for candidate in ["tesseract", "tesseract-ocr"]:
             found = shutil.which(candidate)
             if found:
                 return found
+
+        # Check standard system binary installation paths
+        common_paths = [
+            "/usr/bin/tesseract",
+            "/usr/local/bin/tesseract",
+            "/opt/homebrew/bin/tesseract",
+            "/usr/bin/tesseract-ocr",
+            "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+            "C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe",
+        ]
+        for p in common_paths:
+            if os.path.isfile(p) and os.access(p, os.X_OK):
+                return p
+
+        # Check pytesseract module configuration if installed
+        try:
+            import pytesseract
+            if hasattr(pytesseract.pytesseract, "tesseract_cmd"):
+                cmd = pytesseract.pytesseract.tesseract_cmd
+                if shutil.which(cmd) or (os.path.isfile(cmd) and os.access(cmd, os.X_OK)):
+                    return cmd
+        except ImportError:
+            pass
+
         return None
+
+    def _get_rapidocr_engine(self) -> Any:
+        """Lazy loader for pure-Python / ONNX RapidOCR engine if installed."""
+        if self._rapidocr_engine is None:
+            try:
+                from rapidocr_onnxruntime import RapidOCR
+                self._rapidocr_engine = RapidOCR()
+            except Exception:
+                self._rapidocr_engine = False
+        return self._rapidocr_engine if self._rapidocr_engine is not False else None
 
     def evaluate_digital_word_confidence(self, word_text: str, is_ocr_source: bool = False) -> Tuple[float, str]:
         """
@@ -299,78 +337,151 @@ class PDFConfidenceExtractor:
     ) -> PageExtractionResult:
         """
         Extract text and words using Optical Character Recognition (OCR) on rendered page images.
+        Supports Tesseract OCR (primary) and RapidOCR (pure-Python ONNX fallback).
         """
         width = float(page.width)
         height = float(page.height)
         words: List[WordConfidenceItem] = []
         page_text = ""
+        pil_image = None
 
-        # Attempt Tesseract OCR if binary is available
-        if self.tesseract_cmd:
+        # Render PDF page to high-res image bitmap
+        try:
+            import pypdfium2 as pdfium
+            from PIL import Image
+
+            doc = pdfium.PdfDocument(pdf_path)
+            p = doc[page_number - 1]
+            scale_factor = max(1.0, float(self.dpi) / 72.0)
+            bitmap = p.render(scale=scale_factor)
+            pil_image = bitmap.to_pil()
+        except Exception as ex:
+            logger.warning("Failed to render page %d with pypdfium2: %s", page_number, ex)
+
+        # 1. Primary Attempt: Tesseract OCR (via CLI or system binary)
+        if self.tesseract_cmd and pil_image:
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_img:
+                tmp_img_path = tmp_img.name
+                pil_image.save(tmp_img_path, format="PNG")
+
             try:
-                import pypdfium2 as pdfium
-                from PIL import Image
+                cmd = [self.tesseract_cmd, tmp_img_path, "stdout", "tsv"]
+                res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                lines = res.stdout.strip().split("\n")
+                if len(lines) > 1:
+                    scale_x = width / pil_image.width
+                    scale_y = height / pil_image.height
 
-                doc = pdfium.PdfDocument(pdf_path)
-                p = doc[page_number - 1]
-                # Render at 200 DPI for reliable OCR accuracy
-                bitmap = p.render(scale=200 / 72.0)
-                pil_image = bitmap.to_pil()
+                    text_tokens: List[str] = []
+                    for line in lines[1:]:
+                        cols = line.split("\t")
+                        if len(cols) >= 12:
+                            conf_val = float(cols[10]) if cols[10] != "-1" else -1
+                            text_val = cols[11].strip()
+                            if conf_val >= 0 and text_val:
+                                left = float(cols[6]) * scale_x
+                                top = float(cols[7]) * scale_y
+                                w = float(cols[8]) * scale_x
+                                h = float(cols[9]) * scale_y
 
-                # Run Tesseract with TSV output for word and confidence data
-                import tempfile
-                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_img:
-                    tmp_img_path = tmp_img.name
-                    pil_image.save(tmp_img_path, format="PNG")
-
-                try:
-                    cmd = [self.tesseract_cmd, tmp_img_path, "stdout", "tsv"]
-                    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-                    lines = res.stdout.strip().split("\n")
-                    if len(lines) > 1:
-                        header = lines[0].split("\t")
-                        scale_x = width / pil_image.width
-                        scale_y = height / pil_image.height
-
-                        text_tokens: List[str] = []
-                        for line in lines[1:]:
-                            cols = line.split("\t")
-                            if len(cols) >= 12:
-                                conf_val = float(cols[10]) if cols[10] != "-1" else -1
-                                text_val = cols[11].strip()
-                                if conf_val >= 0 and text_val:
-                                    left = float(cols[6]) * scale_x
-                                    top = float(cols[7]) * scale_y
-                                    w = float(cols[8]) * scale_x
-                                    h = float(cols[9]) * scale_y
-
-                                    normalized_conf = round(conf_val / 100.0, 4)
-                                    words.append(
-                                        WordConfidenceItem(
-                                            word=text_val,
-                                            confidence=normalized_conf,
-                                            source="ocr",
-                                            bbox=WordBox(x0=left, top=top, x1=left + w, bottom=top + h),
-                                        )
+                                normalized_conf = round(conf_val / 100.0, 4)
+                                words.append(
+                                    WordConfidenceItem(
+                                        word=text_val,
+                                        confidence=normalized_conf,
+                                        source="ocr",
+                                        bbox=WordBox(x0=left, top=top, x1=left + w, bottom=top + h),
                                     )
-                                    text_tokens.append(text_val)
-                        page_text = " ".join(text_tokens)
-                finally:
-                    if os.path.exists(tmp_img_path):
-                        os.unlink(tmp_img_path)
-
+                                )
+                                text_tokens.append(text_val)
+                    page_text = " ".join(text_tokens)
             except Exception as ex:
                 logger.warning("Tesseract OCR execution encountered an error on page %d: %s", page_number, ex)
+            finally:
+                if os.path.exists(tmp_img_path):
+                    os.unlink(tmp_img_path)
 
-        # If Tesseract produced no words (or is not installed), fallback to image/digital inspection
+        # 2. Secondary Attempt: Pure-Python / ONNX RapidOCR engine
+        if not words and pil_image:
+            rapidocr = self._get_rapidocr_engine()
+            if rapidocr:
+                try:
+                    import numpy as np
+                    img_np = np.array(pil_image)
+                    ocr_results, _ = rapidocr(img_np)
+                    if ocr_results:
+                        scale_x = width / pil_image.width
+                        scale_y = height / pil_image.height
+                        text_tokens: List[str] = []
+                        for item in ocr_results:
+                            box_pts = item[0]
+                            text_str = str(item[1]).strip()
+                            score_val = float(item[2])
+                            if not text_str:
+                                continue
+
+                            xs = [pt[0] for pt in box_pts]
+                            ys = [pt[1] for pt in box_pts]
+                            x0 = min(xs) * scale_x
+                            top = min(ys) * scale_y
+                            x1 = max(xs) * scale_x
+                            bottom = max(ys) * scale_y
+
+                            line_words = text_str.split()
+                            if len(line_words) == 1:
+                                words.append(
+                                    WordConfidenceItem(
+                                        word=text_str,
+                                        confidence=round(score_val, 4),
+                                        source="rapidocr",
+                                        bbox=WordBox(x0=x0, top=top, x1=x1, bottom=bottom),
+                                    )
+                                )
+                                text_tokens.append(text_str)
+                            elif len(line_words) > 1:
+                                total_len = sum(len(w) for w in line_words)
+                                curr_x = x0
+                                line_width = x1 - x0
+                                for lw in line_words:
+                                    w_frac = len(lw) / max(1, total_len)
+                                    w_box_width = line_width * w_frac
+                                    words.append(
+                                        WordConfidenceItem(
+                                            word=lw,
+                                            confidence=round(score_val, 4),
+                                            source="rapidocr",
+                                            bbox=WordBox(
+                                                x0=curr_x,
+                                                top=top,
+                                                x1=min(x1, curr_x + w_box_width),
+                                                bottom=bottom,
+                                            ),
+                                        )
+                                    )
+                                    text_tokens.append(lw)
+                                    curr_x += w_box_width
+                        page_text = " ".join(text_tokens)
+                except Exception as ex:
+                    logger.warning("RapidOCR execution error on page %d: %s", page_number, ex)
+
+        # 3. Fallback: Check if page has any vector text
         if not words:
-            # Fallback to digital extraction on the page if any text was present
             digital_result = self.extract_digital_page(page, page_number)
             if digital_result.words:
                 return digital_result
 
-            # If completely non-digital and no OCR engine available, provide informative placeholder
-            page_text = "[Scanned image content - OCR engine required for pixel recognition]"
+            # 4. No OCR engine found: Log actionable diagnostic instructions
+            logger.warning(
+                "Page %d contains scanned raster image content but no OCR engine is available. "
+                "To enable OCR in an agent harness or container: "
+                "(1) Debian/Ubuntu: sudo apt-get install -y tesseract-ocr, "
+                "(2) macOS: brew install tesseract, "
+                "(3) Python/No-root: pip install pytesseract rapidocr-onnxruntime, "
+                "(4) Custom binary: set TESSERACT_CMD environment variable or pass --tesseract-cmd PATH.",
+                page_number
+            )
+            page_text = "[Scanned image content - OCR engine required for pixel recognition. Install 'tesseract-ocr' or 'rapidocr-onnxruntime' to process scanned pages]"
             return PageExtractionResult(
                 page_number=page_number,
                 page_type="ocr",
@@ -610,6 +721,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Validate generated JSON against the resources/schema.json definition.",
     )
+    parser.add_argument(
+        "--tesseract-cmd",
+        default=None,
+        help="Explicit path to the Tesseract OCR executable (e.g. /usr/bin/tesseract).",
+    )
+    parser.add_argument(
+        "--dpi",
+        type=int,
+        default=200,
+        help="Rendering resolution (DPI) for OCR page rasterization (default: 200).",
+    )
     return parser
 
 
@@ -617,7 +739,11 @@ def main() -> int:
     parser = build_arg_parser()
     args = parser.parse_args()
 
-    extractor = PDFConfidenceExtractor(default_threshold=args.threshold)
+    extractor = PDFConfidenceExtractor(
+        default_threshold=args.threshold,
+        tesseract_cmd=args.tesseract_cmd,
+        dpi=args.dpi,
+    )
 
     try:
         result = extractor.extract(

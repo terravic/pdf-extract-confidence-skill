@@ -522,6 +522,12 @@ body {
   border-color: var(--accent-primary-hover);
 }
 
+.btn-success {
+  background-color: var(--status-high-border) !important;
+  border-color: var(--status-high-border) !important;
+  color: #ffffff !important;
+}
+
 .btn-sm {
   padding: 3px 8px;
   font-size: 11px;
@@ -1478,12 +1484,20 @@ body {
     let correctedCount = 0;
     let sumConfidence = 0;
     let wordCount = 0;
+    let minConfidence = 1.0;
     const lowConfList = [];
 
     state.data.pages.forEach(page => {
+      let pageSumConf = 0;
+      let pageWordCount = 0;
       page.words.forEach((w, idx) => {
         wordCount++;
+        pageWordCount++;
         sumConfidence += w.confidence;
+        pageSumConf += w.confidence;
+        if (w.confidence < minConfidence) {
+          minConfidence = w.confidence;
+        }
         if (w.human_corrected) {
           correctedCount++;
         }
@@ -1499,6 +1513,8 @@ body {
           });
         }
       });
+      page.word_count = pageWordCount;
+      page.mean_confidence = pageWordCount > 0 ? Number((pageSumConf / pageWordCount).toFixed(4)) : 1.0;
     });
 
     state.data.low_confidence_words = lowConfList;
@@ -1506,6 +1522,8 @@ body {
     state.data.metadata.low_confidence_threshold = state.threshold;
     state.data.metadata.total_words = wordCount;
     state.data.metadata.mean_confidence = wordCount > 0 ? Number((sumConfidence / wordCount).toFixed(4)) : 1.0;
+    state.data.metadata.min_confidence = wordCount > 0 ? Number(minConfidence.toFixed(4)) : 1.0;
+    state.data.metadata.human_corrections_count = correctedCount;
     state.correctionCount = correctedCount;
 
     // Update KPI Card Displays
@@ -1974,12 +1992,27 @@ body {
 
   // Export Corrected JSON File
   function exportJson() {
+    // Commit any active unapplied edit currently in the inspector input box
+    if (state.selectedWordRef && dom.inspEditInput) {
+      const { pageNum, wordIndex } = state.selectedWordRef;
+      const page = state.data.pages[pageNum - 1];
+      if (page && page.words[wordIndex]) {
+        const inputVal = dom.inspEditInput.value.trim();
+        if (inputVal && inputVal !== page.words[wordIndex].word) {
+          page.words[wordIndex].word = inputVal;
+          page.words[wordIndex].confidence = 1.0;
+          page.words[wordIndex].human_corrected = true;
+          rebuildFullText();
+        }
+      }
+    }
+
     recalculateMetrics();
     state.data.metadata.human_corrections_count = state.correctionCount;
     state.data.metadata.last_modified_utc = new Date().toISOString();
 
     const jsonStr = JSON.stringify(state.data, null, 2);
-    const blob = new Blob([jsonStr], { type: "application/json" });
+    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const baseName = (state.data.metadata.filename || "document").replace(/\.pdf$/i, "").replace(/\.json$/i, "");
@@ -1988,8 +2021,32 @@ body {
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    setTimeout(() => {
+      if (a.parentNode) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    }, 60000);
+
+    // Provide visual confirmation on export buttons
+    const exportBtns = [dom.exportJsonBtn, dom.downloadJsonTabBtn].filter(Boolean);
+    exportBtns.forEach(btn => {
+      const origText = btn.dataset.origText || btn.textContent;
+      btn.dataset.origText = origText;
+      btn.textContent = state.correctionCount > 0 ? `Exported (${state.correctionCount} edits) ✓` : "Exported JSON ✓";
+      btn.classList.add("btn-success");
+      setTimeout(() => {
+        btn.textContent = origText;
+        btn.classList.remove("btn-success");
+      }, 2500);
+    });
+
+    renderJsonTab();
+    renderFullTextTab();
+    renderVisualPage();
+    renderTextFlow();
+    renderAuditQueue();
   }
 
   // View JSON Modal
@@ -2109,6 +2166,7 @@ body {
       dom.inspEditInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") applyCorrection();
       });
+      dom.inspEditInput.addEventListener("change", applyCorrection);
     }
     if (dom.prevIssueBtn) dom.prevIssueBtn.addEventListener("click", () => navigateIssues("prev"));
     if (dom.nextIssueBtn) dom.nextIssueBtn.addEventListener("click", () => navigateIssues("next"));

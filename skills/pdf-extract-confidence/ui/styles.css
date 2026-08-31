@@ -515,6 +515,12 @@ body {
   border-color: var(--accent-primary-hover);
 }
 
+.btn-success {
+  background-color: var(--status-high-border) !important;
+  border-color: var(--status-high-border) !important;
+  color: #ffffff !important;
+}
+
 .btn-sm {
   padding: 3px 8px;
   font-size: 11px;

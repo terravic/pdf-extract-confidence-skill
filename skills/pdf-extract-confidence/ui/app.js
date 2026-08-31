@@ -724,8 +724,8 @@
   }
 
   // Export Corrected JSON File
-  function exportJson() {
-    // Commit any active unapplied edit currently in the inspector input box
+  async function exportJson() {
+    // 1. Commit any active unapplied edit currently in the inspector input box
     if (state.selectedWordRef && dom.inspEditInput) {
       const { pageNum, wordIndex } = state.selectedWordRef;
       const page = state.data.pages[pageNum - 1];
@@ -745,24 +745,67 @@
     state.data.metadata.last_modified_utc = new Date().toISOString();
 
     const jsonStr = JSON.stringify(state.data, null, 2);
-    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
     const baseName = (state.data.metadata.filename || "document").replace(/\.pdf$/i, "").replace(/\.json$/i, "");
     const filename = `${baseName}_corrected.json`;
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
 
-    setTimeout(() => {
-      if (a.parentNode) {
-        document.body.removeChild(a);
+    let fileSaved = false;
+
+    // Method A: File System Access API (Native "Save As" file picker on Chrome/Edge macOS & Windows)
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: "JSON Documents (*.json)",
+            accept: { "application/json": [".json"] }
+          }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(jsonStr);
+        await writable.close();
+        fileSaved = true;
+        showToast(`Saved '${filename}' successfully!`);
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          return; // User cancelled the dialog
+        }
       }
-      URL.revokeObjectURL(url);
-    }, 60000);
+    }
 
-    // Provide visual confirmation on export buttons
+    // Method B: Standard Browser Download Anchor
+    if (!fileSaved) {
+      try {
+        const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        fileSaved = true;
+
+        setTimeout(() => {
+          if (a.parentNode) {
+            document.body.removeChild(a);
+          }
+          URL.revokeObjectURL(url);
+        }, 60000);
+      } catch (err) {
+        console.warn("Anchor download error:", err);
+      }
+    }
+
+    // Method C: Also copy JSON to clipboard as a seamless convenience fallback
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(jsonStr);
+      }
+    } catch (e) {
+      // Non-critical clipboard error
+    }
+
+    // Visual button confirmation
     const exportBtns = [dom.exportJsonBtn, dom.downloadJsonTabBtn].filter(Boolean);
     exportBtns.forEach(btn => {
       const origText = btn.dataset.origText || btn.textContent;
@@ -775,11 +818,44 @@
       }, 2500);
     });
 
+    if (!window.showSaveFilePicker) {
+      showToast(`Downloaded '${filename}' & copied JSON to clipboard! (${state.correctionCount} corrections saved)`);
+    }
+
     renderJsonTab();
     renderFullTextTab();
     renderVisualPage();
     renderTextFlow();
     renderAuditQueue();
+  }
+
+  // Toast Notification
+  function showToast(message, type = "success") {
+    let container = document.getElementById("toastContainer");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toastContainer";
+      container.className = "toast-container";
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.classList.add("show");
+    });
+
+    setTimeout(() => {
+      toast.classList.remove("show");
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }, 4500);
   }
 
   // View JSON Modal

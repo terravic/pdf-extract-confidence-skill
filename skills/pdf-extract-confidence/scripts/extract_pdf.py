@@ -86,6 +86,7 @@ class PageExtractionResult:
         height: float,
         text: str,
         words: List[WordConfidenceItem],
+        image_data: Optional[str] = None,
     ):
         self.page_number = page_number
         self.page_type = page_type
@@ -93,6 +94,7 @@ class PageExtractionResult:
         self.height = round(float(height), 2)
         self.text = text
         self.words = words
+        self.image_data = image_data
         self.word_count = len(words)
         if words:
             self.mean_confidence = round(sum(w.confidence for w in words) / len(words), 4)
@@ -100,7 +102,7 @@ class PageExtractionResult:
             self.mean_confidence = 1.0
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result: Dict[str, Any] = {
             "page_number": self.page_number,
             "page_type": self.page_type,
             "width": self.width,
@@ -110,6 +112,9 @@ class PageExtractionResult:
             "text": self.text,
             "words": [w.to_dict() for w in self.words],
         }
+        if self.image_data:
+            result["image_data"] = self.image_data
+        return result
 
 
 class DocumentExtractionResult:
@@ -503,6 +508,37 @@ class PDFConfidenceExtractor:
             words=words,
         )
 
+    def _render_page_image_b64(self, pdf_path: str, page_number: int, scale: float = 1.5) -> Optional[str]:
+        """Render a PDF page to base64 JPEG data URI for visual UI dashboard display."""
+        try:
+            import pypdfium2 as pdfium
+            import io
+            import base64
+            doc = pdfium.PdfDocument(pdf_path)
+            try:
+                p = doc[page_number - 1]
+                bitmap = p.render(scale=scale)
+                pil_img = bitmap.to_pil()
+                buf = io.BytesIO()
+                pil_img.save(buf, format="JPEG", quality=80)
+                b64_str = base64.b64encode(buf.getvalue()).decode("ascii")
+                return f"data:image/jpeg;base64,{b64_str}"
+            finally:
+                doc.close()
+        except Exception:
+            try:
+                import io
+                import base64
+                with pdfplumber.open(pdf_path) as pdf:
+                    p = pdf.pages[page_number - 1]
+                    im = p.to_image(resolution=108)
+                    buf = io.BytesIO()
+                    im.original.save(buf, format="JPEG", quality=80)
+                    b64_str = base64.b64encode(buf.getvalue()).decode("ascii")
+                    return f"data:image/jpeg;base64,{b64_str}"
+            except Exception:
+                return None
+
     def extract(
         self,
         pdf_path: str | Path,
@@ -542,6 +578,11 @@ class PDFConfidenceExtractor:
                         result = self.extract_ocr_page(page, idx, str(path))
                     else:
                         result = self.extract_digital_page(page, idx)
+
+                # Attach rendered page image for pixel-perfect visual dashboard display
+                page_img_b64 = self._render_page_image_b64(str(path), idx)
+                if page_img_b64:
+                    result.image_data = page_img_b64
 
                 pages_result.append(result)
 
@@ -662,8 +703,14 @@ def generate_html_dashboard(
         flags=re.DOTALL,
     )
 
-    # Inline CSS into HTML
+    # Strip separate latest_data.js reference since data is inlined
     html_bundled = html_content.replace(
+        '<script src="latest_data.js"></script>',
+        ''
+    )
+
+    # Inline CSS into HTML
+    html_bundled = html_bundled.replace(
         '<link rel="stylesheet" href="styles.css">',
         f"<style>\n{css_content}\n</style>"
     )
@@ -819,9 +866,37 @@ def main() -> int:
         if not args.html_output:
             print(json_str)
 
+    # 1. Determine HTML dashboard destination
+    dashboard_dest = None
     if args.html_output:
-        dashboard_path = generate_html_dashboard(output_dict, args.html_output)
-        logger.info("Interactive HTML Dashboard generated at: %s", dashboard_path)
+        dashboard_dest = Path(args.html_output).resolve()
+    elif args.output:
+        out_p = Path(args.output).resolve()
+        if out_p.name.endswith("_extracted.json"):
+            dashboard_dest = out_p.with_name(out_p.name.replace("_extracted.json", "_dashboard.html"))
+        else:
+            dashboard_dest = out_p.with_suffix(".html")
+    else:
+        in_p = Path(args.input).resolve()
+        dashboard_dest = in_p.parent / f"{in_p.stem}_dashboard.html"
+
+    if dashboard_dest:
+        dashboard_path = generate_html_dashboard(output_dict, dashboard_dest)
+        logger.info("Interactive HTML Dashboard generated for %s at: %s", output_dict.get("metadata", {}).get("filename", "PDF"), dashboard_path)
+
+    # 2. Sync UI workspace so skills/pdf-extract-confidence/ui/index.html reflects this document
+    try:
+        ui_dir = Path(__file__).resolve().parent.parent / "ui"
+        if ui_dir.exists():
+            latest_json = ui_dir / "latest_extraction.json"
+            with open(latest_json, "w", encoding="utf-8") as f:
+                f.write(json_str)
+
+            latest_js = ui_dir / "latest_data.js"
+            with open(latest_js, "w", encoding="utf-8") as f:
+                f.write(f"window.__LATEST_EXTRACTION_DATA__ = {json_str};\n")
+    except Exception as ex:
+        logger.debug("Could not sync UI workspace data: %s", ex)
 
     return 0
 

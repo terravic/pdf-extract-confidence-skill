@@ -167,7 +167,9 @@
           <button class="btn btn-sm btn-icon" id="zoomOutBtn" title="Zoom Out">-</button>
           <span class="zoom-label" id="zoomLabel">100%</span>
           <button class="btn btn-sm btn-icon" id="zoomInBtn" title="Zoom In">+</button>
-          <button class="btn btn-sm" id="zoomResetBtn">Reset</button>
+          <button class="btn btn-sm" id="btnFitWidth" title="Fit to Pane Width">Fit Width</button>
+          <button class="btn btn-sm" id="btnFitPage" title="Fit Entire Page in View">Fit Page</button>
+          <button class="btn btn-sm" id="zoomResetBtn" title="Reset Zoom to 100%">100%</button>
         </div>
         <div class="page-stepper">
           <span class="kpi-badge info" id="pageModalityBadge">Digital Vector</span>
@@ -178,9 +180,11 @@
       </div>
 
       <div class="canvas-viewport" id="canvasViewport">
-        <div class="pdf-sheet-wrapper" id="sheetWrapper">
-          <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
-          <div class="word-overlay-container" id="overlayContainer"></div>
+        <div class="pdf-viewport-inner" id="viewportInner">
+          <div class="pdf-sheet-wrapper" id="sheetWrapper">
+            <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
+            <div class="word-overlay-container" id="overlayContainer"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -456,6 +460,7 @@
     </div>
   </div>
 
+  <script src="latest_data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

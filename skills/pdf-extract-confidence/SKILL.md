@@ -42,7 +42,7 @@ Follow these sequential steps when a user requests PDF text extraction with conf
 
 ### Step 2: Execute the Extraction Script
 
-Run the extraction script using the Python CLI tool:
+Run the extraction script using the Python CLI tool. **Important:** Do NOT automatically pass `--llm-correct` or run automated LLM correction during standard document extraction. The skill must first extract text, compute confidence scores, and generate the UI dashboard so that the human reviewer can inspect flagged tokens and decide when to click the **"Auto-Correct with Gemini"** button in the dashboard interface.
 
 ```bash
 python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
@@ -54,16 +54,7 @@ python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
   --validate
 ```
 
-To enable **Agentic LLM Word Correction** with Gemini:
-```bash
-python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
-  --input "samples/104-10062-10073.pdf" \
-  --output "samples/104-10062-10073_extracted.json" \
-  --html-output "samples/104-10062-10073_dashboard.html" \
-  --llm-correct \
-  --llm-model "gemini-3.7-flash" \
-  --validate
-```
+*(Note: `--llm-correct` is strictly an optional CLI flag reserved only for cases where the human user explicitly requests headless/batch AI correction without visual UI review).*
 
 Key CLI flags:
 - `-i, --input PATH`: Target input PDF file (required).
@@ -96,7 +87,8 @@ Key CLI flags:
 Always generate the standalone dashboard file by including `--html-output <basename>_dashboard.html` in Step 2:
 1. The script bundles the HTML markup, CSS stylesheet, and extracted JSON payload into a self-contained single-file HTML dashboard that works out-of-the-box in any browser or iframe without external network requests or file uploading.
 2. The interactive UI dashboard provides:
-   - **Dual Verification Pathways**: Pure manual inspection with Word Inspector AND one-click **"Auto-Correct with Gemini"** agentic review.
+   - **Human-Driven Inspection**: Initial extraction displays original document text and confidence flags for human inspection without performing unprompted background AI modifications.
+   - **On-Demand "Auto-Correct with Gemini"**: The human reviewer clicks the **"Auto-Correct with Gemini"** button in the dashboard header to initiate LLM analysis when desired.
    - **Staged AI Review Table (Option A - Default)**: Displays Gemini's suggested fixes, rationales, and an instant **"Apply All Suggestions"** button to minimize human-in-the-loop overhead.
    - **Direct Auto-Apply (Option B)**: Instantly applies LLM suggestions with an undo snapshot stack.
    - **Word Inspector AI Suggest**: Ask Gemini for recommendations on individual selected tokens with 1-click accept.
@@ -109,8 +101,8 @@ Always generate the standalone dashboard file by including `--html-output <basen
 Provide a clean, structured summary containing:
 1. Document metadata (file name, total pages, total words extracted).
 2. Overall confidence metrics (mean confidence, minimum confidence).
-3. Audit summary: Number of low-confidence words detected and LLM suggestions generated.
-4. If low-confidence words exist, list the top flagged words with page number, confidence score, and suggested AI actions.
+3. Audit summary: Number of low-confidence words detected.
+4. If low-confidence words exist, list the top flagged words with page number, confidence score, and explain that the human reviewer can inspect and trigger AI correction in the dashboard.
 5. Location of the generated JSON output file and interactive HTML dashboard.
 
 ## Downstream Consumption Patterns

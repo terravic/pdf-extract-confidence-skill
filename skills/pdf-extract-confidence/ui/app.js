@@ -147,12 +147,15 @@
       zoomInBtn: document.getElementById("zoomInBtn"),
       zoomOutBtn: document.getElementById("zoomOutBtn"),
       zoomResetBtn: document.getElementById("zoomResetBtn"),
+      btnFitWidth: document.getElementById("btnFitWidth"),
+      btnFitPage: document.getElementById("btnFitPage"),
       zoomLabel: document.getElementById("zoomLabel"),
       prevPageBtn: document.getElementById("prevPageBtn"),
       nextPageBtn: document.getElementById("nextPageBtn"),
       pageIndicator: document.getElementById("pageIndicator"),
       pageModalityBadge: document.getElementById("pageModalityBadge"),
       canvasViewport: document.getElementById("canvasViewport"),
+      viewportInner: document.getElementById("viewportInner"),
       sheetWrapper: document.getElementById("sheetWrapper"),
       pdfCanvas: document.getElementById("pdfCanvas"),
       overlayContainer: document.getElementById("overlayContainer"),
@@ -376,6 +379,29 @@
     renderTextFlow();
   }
 
+  // In-memory cache for rendered original PDF page images
+  const pageImageCache = new Map();
+
+  // Auto-fit document inside viewport
+  function autoFitPage(mode = "width") {
+    if (!state.data || !state.data.pages || !state.data.pages.length || !dom.canvasViewport) return;
+    const page = state.data.pages[state.currentPage - 1];
+    if (!page) return;
+    const width = page.width || 612;
+    const height = page.height || 792;
+    const vpWidth = Math.max(200, dom.canvasViewport.clientWidth - 48);
+    const vpHeight = Math.max(200, dom.canvasViewport.clientHeight - 48);
+
+    if (mode === "page" && vpHeight > 100) {
+      const scaleX = vpWidth / width;
+      const scaleY = vpHeight / height;
+      state.zoom = Math.max(0.2, Math.min(2.0, Math.floor(Math.min(scaleX, scaleY) * 100) / 100));
+    } else {
+      state.zoom = Math.max(0.2, Math.min(2.0, Math.floor((vpWidth / width) * 100) / 100));
+    }
+    renderVisualPage();
+  }
+
   // Render Visual PDF Sheet & Canvas
   function renderVisualPage() {
     const page = state.data.pages[state.currentPage - 1];
@@ -394,10 +420,19 @@
     dom.sheetWrapper.style.height = height + "px";
     dom.sheetWrapper.style.transform = `scale(${state.zoom})`;
 
+    if (dom.viewportInner) {
+      dom.viewportInner.style.width = Math.round(width * state.zoom) + "px";
+      dom.viewportInner.style.height = Math.round(height * state.zoom) + "px";
+    }
+
+    if (dom.zoomLabel) {
+      dom.zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
+    }
+
     // Update Modality Badge
     if (dom.pageModalityBadge) {
       if (page.page_type === "ocr" || width < 400) {
-        dom.pageModalityBadge.textContent = "Scanned OCR Receipt";
+        dom.pageModalityBadge.textContent = "Scanned OCR";
         dom.pageModalityBadge.className = "kpi-badge low";
       } else if (state.data.pages.length > 1) {
         dom.pageModalityBadge.textContent = "Hybrid Multi-Page";
@@ -409,43 +444,67 @@
     }
 
     const ctx = dom.pdfCanvas.getContext("2d");
-    ctx.fillStyle = (page.page_type === "ocr" || width < 400) ? "#fcfbfa" : "#ffffff";
-    ctx.fillRect(0, 0, width, height);
 
-    ctx.strokeStyle = "#cbd5e1";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0, 0, width, height);
-
-    const isMonospace = page.page_type === "ocr" || width < 400;
-
-    // Render text on canvas
-    page.words.forEach(w => {
-      const box = w.bbox;
-      const boxHeight = Math.max(10, box.bottom - box.top);
-      const fontSize = Math.max(8.5, Math.min(boxHeight * 0.85, 16));
-      ctx.font = isMonospace
-        ? `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace`
-        : `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-
-      let isDimmed = false;
-      if (state.filterMode === "low" && w.confidence >= state.threshold) isDimmed = true;
-      else if (state.filterMode === "corrected" && !w.human_corrected) isDimmed = true;
-      else if (state.filterMode === "ai" && !w.llm_corrected && !w.llm_approved) isDimmed = true;
-
-      if (isDimmed) {
-        ctx.fillStyle = "rgba(15, 23, 42, 0.12)";
-      } else if (w.confidence < state.threshold) {
-        ctx.fillStyle = "#991b1b"; // Dark red for low confidence
-      } else if (w.human_corrected) {
-        ctx.fillStyle = "#5b21b6"; // Purple for manual corrected
-      } else if (w.llm_corrected || w.llm_approved) {
-        ctx.fillStyle = "#4338ca"; // Indigo for AI corrected/approved
-      } else {
-        ctx.fillStyle = "#0f172a";
+    if (page.image_data) {
+      // High-fidelity rendering of original PDF page (digital, scanned, handwriting, stamps, tables)
+      let cachedImg = pageImageCache.get(page.image_data);
+      if (!cachedImg) {
+        cachedImg = new Image();
+        cachedImg.onload = () => {
+          ctx.clearRect(0, 0, width, height);
+          ctx.drawImage(cachedImg, 0, 0, width, height);
+        };
+        cachedImg.src = page.image_data;
+        pageImageCache.set(page.image_data, cachedImg);
       }
 
-      ctx.fillText(w.word, box.x0, box.bottom - 2);
-    });
+      if (cachedImg.complete && cachedImg.naturalWidth > 0) {
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(cachedImg, 0, 0, width, height);
+      } else {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+      }
+    } else {
+      // Clean fallback vector text canvas rendering
+      ctx.fillStyle = (page.page_type === "ocr" || width < 400) ? "#fcfbfa" : "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, width, height);
+
+      const isMonospace = page.page_type === "ocr" || width < 400;
+
+      // Render fallback text on canvas
+      page.words.forEach(w => {
+        const box = w.bbox;
+        const boxHeight = Math.max(10, box.bottom - box.top);
+        const fontSize = Math.max(8.5, Math.min(boxHeight * 0.85, 16));
+        ctx.font = isMonospace
+          ? `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace`
+          : `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+
+        let isDimmed = false;
+        if (state.filterMode === "low" && w.confidence >= state.threshold) isDimmed = true;
+        else if (state.filterMode === "corrected" && !w.human_corrected) isDimmed = true;
+        else if (state.filterMode === "ai" && !w.llm_corrected && !w.llm_approved) isDimmed = true;
+
+        if (isDimmed) {
+          ctx.fillStyle = "rgba(15, 23, 42, 0.12)";
+        } else if (w.confidence < state.threshold) {
+          ctx.fillStyle = "#991b1b"; // Dark red for low confidence
+        } else if (w.human_corrected) {
+          ctx.fillStyle = "#5b21b6"; // Purple for manual corrected
+        } else if (w.llm_corrected || w.llm_approved) {
+          ctx.fillStyle = "#4338ca"; // Indigo for AI corrected/approved
+        } else {
+          ctx.fillStyle = "#0f172a";
+        }
+
+        ctx.fillText(w.word, box.x0, box.bottom - 2);
+      });
+    }
 
     // Rebuild Bounding Box Overlays
     dom.overlayContainer.innerHTML = "";
@@ -483,10 +542,7 @@
       boxEl.style.height = Math.max(10, box.bottom - box.top) + "px";
 
       const badgeText = w.human_corrected ? "Verified" : (w.llm_corrected ? "AI Fix" : (w.llm_approved ? "AI Approved" : `${Math.round(w.confidence * 100)}%`));
-      boxEl.title = `Word: "${w.word}"
-Confidence: ${(w.confidence * 100).toFixed(1)}%
-Status: ${badgeText}
-Source: ${w.source}`;
+      boxEl.title = `Word: "${w.word}"\nConfidence: ${(w.confidence * 100).toFixed(1)}%\nStatus: ${badgeText}\nSource: ${w.source}`;
 
       boxEl.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1365,7 +1421,7 @@ Return a single JSON object:
 
     const initialThreshold = parsed.metadata.low_confidence_threshold || 0.85;
     setGlobalThreshold(initialThreshold);
-    renderVisualPage();
+    autoFitPage("width");
     renderTextFlow();
     renderAuditQueue();
     renderFullTextTab();
@@ -1568,14 +1624,24 @@ Return a single JSON object:
 
     if (dom.zoomInBtn) {
       dom.zoomInBtn.addEventListener("click", () => {
-        state.zoom = Math.min(2.0, state.zoom + 0.15);
+        state.zoom = Math.min(2.5, Math.round((state.zoom + 0.15) * 100) / 100);
         renderVisualPage();
       });
     }
     if (dom.zoomOutBtn) {
       dom.zoomOutBtn.addEventListener("click", () => {
-        state.zoom = Math.max(0.5, state.zoom - 0.15);
+        state.zoom = Math.max(0.25, Math.round((state.zoom - 0.15) * 100) / 100);
         renderVisualPage();
+      });
+    }
+    if (dom.btnFitWidth) {
+      dom.btnFitWidth.addEventListener("click", () => {
+        autoFitPage("width");
+      });
+    }
+    if (dom.btnFitPage) {
+      dom.btnFitPage.addEventListener("click", () => {
+        autoFitPage("page");
       });
     }
     if (dom.zoomResetBtn) {
@@ -1584,6 +1650,13 @@ Return a single JSON object:
         renderVisualPage();
       });
     }
+
+    // Auto-fit on window resize
+    window.addEventListener("resize", () => {
+      if (state.data && state.data.pages && state.data.pages.length) {
+        autoFitPage("width");
+      }
+    });
 
     if (dom.prevPageBtn) {
       dom.prevPageBtn.addEventListener("click", () => {
@@ -1725,10 +1798,16 @@ Return a single JSON object:
     applyTheme(state.theme);
     registerEvents();
 
-    // Check if host environment pre-set extraction data on window
-    if (typeof window !== "undefined" && window.__EXTRACTION_DATA__) {
-      loadDataPayload(window.__EXTRACTION_DATA__, "Host Data");
-      return;
+    // Check if latest extraction data was written by extractor or pre-set on window
+    if (typeof window !== "undefined") {
+      if (window.__LATEST_EXTRACTION_DATA__) {
+        loadDataPayload(window.__LATEST_EXTRACTION_DATA__, window.__LATEST_EXTRACTION_DATA__.metadata?.filename || "Latest Extraction");
+        return;
+      }
+      if (window.__EXTRACTION_DATA__) {
+        loadDataPayload(window.__EXTRACTION_DATA__, window.__EXTRACTION_DATA__.metadata?.filename || "Host Data");
+        return;
+      }
     }
 
     // Check if URL parameters specified a JSON file or payload

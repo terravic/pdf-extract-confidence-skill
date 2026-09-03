@@ -603,11 +603,18 @@ body {
 .canvas-viewport {
   flex: 1;
   overflow: auto;
-  padding: 24px;
+  padding: 20px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   background-color: var(--bg-app);
+}
+
+.pdf-viewport-inner {
+  position: relative;
+  display: inline-block;
+  margin: 0 auto 24px auto;
+  transition: width var(--transition-fast), height var(--transition-fast);
 }
 
 .pdf-sheet-wrapper {
@@ -616,9 +623,8 @@ body {
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-xs);
-  transform-origin: top center;
+  transform-origin: top left;
   transition: transform var(--transition-fast);
-  margin-bottom: 24px;
 }
 
 .pdf-canvas {

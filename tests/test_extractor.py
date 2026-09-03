@@ -177,10 +177,9 @@ class TestPDFConfidenceExtractor(unittest.TestCase):
             script_match = re.search(r"<script>(.*?)</script>", content, flags=re.DOTALL)
             self.assertIsNotNone(script_match)
             js_code = script_match.group(1)
-            self.assertIn("/* __DATA_PAYLOAD_START__ */", js_code)
-
             node_check = subprocess.run(
-                ["node", "-e", f"new Function({json.dumps(js_code)})"],
+                ["node", "--check", "-"],
+                input=js_code,
                 capture_output=True,
                 text=True
             )

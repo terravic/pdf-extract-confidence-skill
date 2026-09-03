@@ -150,6 +150,10 @@
             "type": "string",
             "description": "Full extracted plain text for this specific page."
           },
+          "image_data": {
+            "type": "string",
+            "description": "Optional base64-encoded image data URI (data:image/jpeg;base64,...) of the rendered original page."
+          },
           "words": {
             "type": "array",
             "description": "Ordered list of individual words with coordinates and confidence scores.",

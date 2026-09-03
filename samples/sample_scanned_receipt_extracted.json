@@ -3,7 +3,7 @@
     "filename": "sample_scanned_receipt.pdf",
     "total_pages": 1,
     "extraction_engine": "hybrid_extractor",
-    "timestamp_utc": "2026-09-03T17:53:30.607429+00:00",
+    "timestamp_utc": "2026-09-03T18:27:19.078369+00:00",
     "total_words": 86,
     "mean_confidence": 0.9531,
     "min_confidence": 0.72,
@@ -1113,107 +1113,6 @@
         "bottom": 280.05
       },
       "reason": "ocr_uncertainty"
-    }
-  ],
-  "llm_suggestions": [
-    {
-      "page": 1,
-      "word_index": 2,
-      "original_word": "#1042",
-      "suggested_word": "#1042",
-      "action": "approve",
-      "reason": "Approved token structure within line context.",
-      "confidence": 0.79
-    },
-    {
-      "page": 1,
-      "word_index": 8,
-      "original_word": "T-09",
-      "suggested_word": "T-09",
-      "action": "approve",
-      "reason": "Valid alphanumeric product/transaction identifier.",
-      "confidence": 0.79
-    },
-    {
-      "page": 1,
-      "word_index": 11,
-      "original_word": "#48",
-      "suggested_word": "#48",
-      "action": "approve",
-      "reason": "Approved token structure within line context.",
-      "confidence": 0.81
-    },
-    {
-      "page": 1,
-      "word_index": 14,
-      "original_word": "(555)",
-      "suggested_word": "(555)",
-      "action": "approve",
-      "reason": "Approved token structure within line context.",
-      "confidence": 0.81
-    },
-    {
-      "page": 1,
-      "word_index": 16,
-      "original_word": "----------------------------------------",
-      "suggested_word": "----------------------------------------",
-      "action": "approve",
-      "reason": "Valid decorative receipt delimiter line.",
-      "confidence": 0.72
-    },
-    {
-      "page": 1,
-      "word_index": 40,
-      "original_word": "(3ct)",
-      "suggested_word": "(3ct)",
-      "action": "approve",
-      "reason": "Valid alphanumeric product/transaction identifier.",
-      "confidence": 0.79
-    },
-    {
-      "page": 1,
-      "word_index": 48,
-      "original_word": "----------------------------------------",
-      "suggested_word": "----------------------------------------",
-      "action": "approve",
-      "reason": "Valid decorative receipt delimiter line.",
-      "confidence": 0.72
-    },
-    {
-      "page": 1,
-      "word_index": 52,
-      "original_word": "(6.00%):",
-      "suggested_word": "(6.00%):",
-      "action": "approve",
-      "reason": "Approved token structure within line context.",
-      "confidence": 0.81
-    },
-    {
-      "page": 1,
-      "word_index": 71,
-      "original_word": "TXN-20260828-99410",
-      "suggested_word": "TXN-20260828-99410",
-      "action": "approve",
-      "reason": "Legitimate address or transaction token approved as-is.",
-      "confidence": 0.79
-    },
-    {
-      "page": 1,
-      "word_index": 72,
-      "original_word": "****************************************",
-      "suggested_word": "****************************************",
-      "action": "approve",
-      "reason": "Valid decorative receipt delimiter line.",
-      "confidence": 0.72
-    },
-    {
-      "page": 1,
-      "word_index": 85,
-      "original_word": "****************************************",
-      "suggested_word": "****************************************",
-      "action": "approve",
-      "reason": "Valid decorative receipt delimiter line.",
-      "confidence": 0.72
     }
   ]
 }

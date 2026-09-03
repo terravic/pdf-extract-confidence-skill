@@ -3,7 +3,7 @@
     "filename": "sample_mixed_report.pdf",
     "total_pages": 2,
     "extraction_engine": "hybrid_extractor",
-    "timestamp_utc": "2026-09-03T17:53:31.149919+00:00",
+    "timestamp_utc": "2026-09-03T18:27:19.624216+00:00",
     "total_words": 156,
     "mean_confidence": 1.0,
     "min_confidence": 1.0,
@@ -1751,6 +1751,5 @@
       ]
     }
   ],
-  "low_confidence_words": [],
-  "llm_suggestions": []
+  "low_confidence_words": []
 }

@@ -1003,7 +1003,7 @@ Return a single JSON object:
       showToast("AI Suggestion error: " + err.message, "error");
     } finally {
       if (dom.btnAiSuggest) dom.btnAiSuggest.innerHTML = `
-        <svg class="ai-sparkle-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="ai-action-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4"/>
         </svg>
         <span>AI Suggest</span>

@@ -1,6 +1,6 @@
 # PDF Word-Level Confidence Extraction Skill
 
-An agent skill and standalone Python tool designed for conversational AI agents, LLM tool-use systems, and autonomous agent harnesses. It extracts text from PDF documents (digital vector, scanned raster, or hybrid), computes normalized per-word confidence scores in the range [0.0, 1.0], outputs structured JSON, and provides an interactive UI Dashboard for visual verification and human-in-the-loop correction.
+An agent skill and standalone Python tool designed for conversational AI agents, LLM tool-use systems, and autonomous agent harnesses. It extracts text from PDF documents (digital vector, scanned raster, or hybrid), computes normalized per-word confidence scores in the range [0.0, 1.0], outputs structured JSON, and provides an interactive UI Dashboard for visual verification and human-in-the-loop correction. It also integrates an agentic LLM correction stage powered by Gemini 3.7 Flash to review and resolve low-confidence OCR misrecognitions with surrounding context awareness.
 
 ![PDF Word-Level Confidence Extraction Skill Architecture & Workflow](assets/skill_workflow_diagram.jpg)
 
@@ -18,10 +18,12 @@ An agent skill and standalone Python tool designed for conversational AI agents,
 5. How to Use the Python Code
    - Command Line Interface (CLI)
    - Python Library API
+   - Agentic LLM Word Correction Pipeline
 6. Interactive UI Dashboard
    - Overview and Capabilities
    - Visual PDF Page and Bounding Box View
    - Confidence Cutoff Slider
+   - Gemini Auto-Correction and Review Workflows
    - Human-in-the-Loop Word Editor
    - Audit Queue Review
    - Light and Dark Theme Toggle
@@ -31,6 +33,7 @@ An agent skill and standalone Python tool designed for conversational AI agents,
    - What the Skill Needs to Run
    - Step-by-Step Execution Workflow
    - Understanding Confidence Scores
+   - Context-Aware AI Correction (Gemini 3.7 Flash)
    - Real-World Prompt Examples & Workflows
    - Sample Agent Conversation and Output
    - How to Use the Visual Dashboard for Corrections
@@ -52,6 +55,8 @@ This project delivers:
 - Per-Word Confidence Scoring: Every extracted word is assigned a confidence score between 0.0 and 1.0.
 - Dual-Purpose JSON Output: Contains both consolidated full text for immediate NLP/LLM ingestion and a structured word-by-word array with coordinates (`bbox`) for audit trails.
 - Low-Confidence Flagging: Automatically isolates words scoring below a configurable cutoff threshold (default: 0.85) into a dedicated audit array.
+- Context-Aware LLM Word Correction: Uses Gemini 3.7 Flash with a surrounding context window (+/- 6 tokens) to analyze ambiguous tokens, fix OCR misrecognitions (such as `INV-2O26` to `INV-2026` or trailing punctuation artifacts like `12345)` to `12345`), and approve legitimate domain terms.
+- Dual Review Modes: Supports Staged Review (Option A, default) with a 1-click batch application table, as well as Direct Auto-Apply (Option B) with an interactive undo stack.
 - Interactive UI Dashboard: A responsive HTML/CSS/JavaScript interface featuring dynamic threshold sliders, visual PDF page bounding boxes, light/dark themes, and human-in-the-loop editing.
 - Multi-Harness Compatibility: Packaged as a standard Skill (`skills/pdf-extract-confidence/SKILL.md`) that works seamlessly across standard agent harnesses, IDE extensions, and skill plugin environments.
 
@@ -67,8 +72,12 @@ The extractor implements a hybrid pipeline:
    - Hybrid Pages: Pages containing vector text alongside raster stamps or signatures are processed to extract all readable elements.
 2. Coordinate Normalization: Bounding boxes are computed in standard PDF point dimensions (72 points per inch) with top-left origin.
 3. Metric Computation: Global mean confidence, minimum confidence, total word count, and low-confidence counts are computed and recorded in the metadata block.
-4. UI Dashboard Rendering: Interactive client-side application renders pages with SVG/DOM overlays, synchronized word selection, and real-time JSON export.
-5. Schema Validation: All outputs conform to `skills/pdf-extract-confidence/resources/schema.json`.
+4. Agentic LLM Word Correction (Optional / On-Demand):
+   - Low-confidence tokens are packaged with their surrounding context (+/- 6 tokens) into a structured schema.
+   - Gemini 3.7 Flash analyzes each token to either suggest a correction with an explanation or approve the word as-is.
+   - Corrections are staged in an audit table (Option A) or applied directly to the document token stream (Option B).
+5. UI Dashboard Rendering: Interactive client-side application renders pages with SVG/DOM overlays, synchronized word selection, and real-time JSON export.
+6. Schema Validation: All outputs conform to `skills/pdf-extract-confidence/resources/schema.json`.
 
 ---
 
@@ -91,7 +100,8 @@ pdf-extract-confidence-skill/
 │       │   └── app.js                     # Slider filtering, coordinate mapping, and HITL logic
 │       ├── scripts/
 │       │   ├── extract_pdf.py             # Core extraction engine, CLI, and HTML bundler
-│       │   └── generate_samples.py        # Synthetic sample PDF generator
+│       │   ├── generate_samples.py        # Synthetic sample PDF generator
+│       │   └── llm_correction.py          # Gemini 3.7 Flash LLM word correction engine
 │       ├── resources/
 │       │   ├── schema.json                # JSON Schema for extraction output
 │       │   └── sample_output.json         # Reference JSON output structure
@@ -114,6 +124,7 @@ pdf-extract-confidence-skill/
 └── tests/
     ├── __init__.py
     ├── test_extractor.py                  # Unit, CLI, OCR, and Dashboard integration tests
+    ├── test_llm_correction.py             # LLM context extraction, prompt, and correction tests
     └── test_schema.py                     # Schema validation tests
 ```
 
@@ -207,6 +218,29 @@ python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
   --threshold 0.90
 ```
 
+#### Extract with Agentic Gemini LLM Word Correction (Option A: Staged Review)
+Run extraction and stage AI suggestions in the review table using Gemini 3.7 Flash:
+```bash
+python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
+  --input samples/sample_scanned_receipt.pdf \
+  --output output.json \
+  --html-output receipt_dashboard.html \
+  --llm-correct \
+  --gemini-api-key "$GEMINI_API_KEY"
+```
+
+#### Extract and Auto-Apply Gemini Corrections Directly (Option B)
+Run extraction, query Gemini 3.7 Flash, and immediately apply approved word corrections to the document:
+```bash
+python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
+  --input samples/sample_scanned_receipt.pdf \
+  --output output.json \
+  --html-output receipt_dashboard.html \
+  --llm-correct \
+  --llm-auto-apply \
+  --gemini-api-key "$GEMINI_API_KEY"
+```
+
 #### Enforce Extraction Mode
 Choose between `auto` (default), `digital`, or `ocr`:
 ```bash
@@ -234,6 +268,11 @@ Option | Type | Default | Description
 `--html-output` | String | None | Path to generate a standalone interactive HTML dashboard.
 `-t, --threshold` | Float | `0.85` | Cutoff score in range [0.0, 1.0] for low-confidence audit list.
 `-m, --mode` | String | `auto` | Extraction modality: `auto`, `digital`, or `ocr`.
+`--llm-correct` | Flag | `False` | Run LLM word correction on low-confidence tokens.
+`--llm-auto-apply` | Flag | `False` | Auto-apply LLM corrections directly (Option B) instead of staging.
+`--llm-model` | String | `gemini-3.7-flash` | Gemini model ID for corrections.
+`--gemini-api-key` | String | None | Gemini API Key (or set via `GEMINI_API_KEY` env var).
+`--mock-llm` | Flag | `False` | Uses local heuristic mock for testing without API keys.
 `--tesseract-cmd` | String | None | Explicit path to Tesseract binary (or set via `TESSERACT_CMD` env var).
 `--dpi` | Integer | `200` | Rendering resolution (DPI) for rasterizing pages before OCR.
 `--validate` | Flag | `False` | Validates generated JSON against `resources/schema.json`.
@@ -250,6 +289,10 @@ from pathlib import Path
 from skills.pdf_extract_confidence.scripts.extract_pdf import (
     PDFConfidenceExtractor,
     generate_html_dashboard,
+)
+from skills.pdf_extract_confidence.scripts.llm_correction import (
+    GeminiWordCorrector,
+    run_llm_correction_pipeline,
 )
 
 # Initialize extractor with default threshold
@@ -279,8 +322,15 @@ for word_item in result.pages[0].words[:5]:
 json_data = result.to_json(indent=2)
 output_dict = result.to_dict()
 
+# Optional: Run Gemini 3.7 Flash LLM Word Correction Pipeline
+corrector = GeminiWordCorrector(model="gemini-3.7-flash")
+enhanced_dict = corrector.process_extraction_payload(
+    payload=output_dict,
+    auto_apply=False  # True for Option B, False for Option A
+)
+
 # Generate standalone HTML Dashboard
-generate_html_dashboard(output_dict, "invoice_dashboard.html")
+generate_html_dashboard(enhanced_dict, "invoice_dashboard.html")
 ```
 
 ---
@@ -297,7 +347,8 @@ The UI Dashboard (`skills/pdf-extract-confidence/ui/index.html`) is a responsive
    - Overlays interactive bounding boxes for every extracted word token:
      - **Red/Amber outline**: Word confidence is strictly below the global cutoff threshold.
      - **Subtle Green outline**: Word confidence meets or exceeds the cutoff threshold.
-     - **Purple outline**: Word has been manually edited and verified by a human reviewer.
+     - **Blue outline**: Word corrected by Gemini LLM.
+     - **Purple outline**: Word manually edited and verified by a human reviewer.
      - **Solid Blue outline with glow**: Currently selected word token.
    - Clicking any bounding box on the page automatically selects the word, focuses it in the Inspector, and highlights its position in the token stream.
    - Includes zoom controls (`-`, `100%`, `+`, `Reset`) and multi-page stepper controls (`Previous Page`, `Next Page`).
@@ -310,12 +361,20 @@ The UI Dashboard (`skills/pdf-extract-confidence/ui/index.html`) is a responsive
      - Low-confidence badge counts and filter button counters.
      - The populated items in the Audit Review Queue.
 
-3. **Active View Filter Buttons**:
+3. **Gemini Auto-Correction and Review Workflows**:
+   - **Header Auto-Correct Button**: Click **[Auto-Correct with Gemini]** in the header to run batch analysis across all low-confidence words.
+   - **Settings Configuration**: Choose your preferred model (`Gemini 3.7 Flash` by default, or `Gemini 2.5 Flash` / `Gemini 2.5 Pro`), configure your Gemini API Key, and toggle between Option A (Staged Review Table) and Option B (Direct Auto-Apply).
+   - **Inspector AI Suggest**: Click **[AI Suggest]** on any individual token to request an instant context-aware recommendation for that specific word.
+   - **Option A (Staged Review Table)**: Displays all AI recommendations in an interactive table with original word, suggested word, confidence score, action, and reasoning. Review individual suggestions or apply all at once with **[Apply All Approved Suggestions]**.
+   - **Option B (Direct Auto-Apply)**: Automatically updates document text and bounding boxes immediately, with full state preservation.
+   - **Undo Stack**: Multi-step undo mechanism allows reverting AI corrections at any time.
+
+4. **Active View Filter Buttons**:
    - **All Words**: Displays all extracted word tokens on both the document sheet and the text stream.
    - **Low Confidence Only**: Dims high-confidence text to a subtle background watermark while highlighting all sub-threshold tokens with bright red bounding boxes, and filters the text stream to show only low-confidence tokens.
-   - **Corrected Only**: Dims uncorrected text while spotlighting human-corrected tokens in purple, and filters the text stream to show only verified tokens.
+   - **Corrected Only**: Dims uncorrected text while spotlighting corrected tokens in purple/blue, and filters the text stream to show only verified tokens.
 
-4. **Right-Pane Tabbed Workspace**:
+5. **Right-Pane Tabbed Workspace**:
    - **Tab 1: Document Text & Word Inspector**:
      - Word Inspector card showing word text, animated confidence meter bar, extraction source (`digital` vs `ocr`), page number, and bounding box coordinates (`x0`, `top`, `x1`, `bottom`).
      - Manual correction text field with **Apply** (Enter key) and **Approve** buttons.
@@ -332,38 +391,39 @@ The UI Dashboard (`skills/pdf-extract-confidence/ui/index.html`) is a responsive
      - Enumerates all tokens currently scoring below the active cutoff threshold.
      - Displays word text, confidence score badge, source, and page number with a one-click **[Inspect]** jump button.
 
-5. **Light and Dark Theme Toggle**:
-   - Theme toggle button in the header with Sun and Moon SVG icons (`[Dark Mode]` / `[Light Mode]`).
+6. **Light and Dark Theme Toggle**:
+   - Theme toggle button in the header (`[Dark Mode]` / `[Light Mode]`).
    - Uses tailored CSS color tokens and persists user preference safely across sessions.
 
-6. **Import and Export**:
+7. **Import and Export**:
    - **Load JSON**: Open any existing extraction JSON file via the file picker to populate the entire dashboard.
    - **View JSON**: View formatted JSON in an interactive modal with single-click clipboard copy.
-   - **Export Corrected JSON**: Download the updated JSON file containing all manual edits, updated word counts, and modified confidence metrics.
+   - **Export Corrected JSON**: Download the updated JSON file containing all manual edits, AI suggestions, updated word counts, and modified confidence metrics.
 
 ---
 
 ## 7. Non-Technical User Guide: Using the Skill in an Agent Harness
 
-This section is written for non-technical users, analysts, compliance officers, and business operations specialists who want to use this skill through conversational AI agent assistants and enterprise agent workspaces.
+This section is written for non-technical users, business operations specialists, data reviewers, and compliance officers who want to use this skill through conversational AI agent assistants and enterprise workspaces.
 
 ### Overview for Non-Technical Users
 
-When you upload a PDF file (such as an invoice, receipt, legal contract, or medical report) to an AI assistant, you often want two things:
+When you upload a PDF file (such as an invoice, receipt, legal contract, or medical report) to an AI assistant, you need two things:
 1. The text extracted accurately into readable format.
-2. An assurance that no critical numbers or names were misread or guessed by optical character recognition (OCR).
+2. Complete certainty that critical numbers, dates, or names were not misread by optical character recognition (OCR).
 
-This skill automatically evaluates every single word in your document and scores it on a scale from 0.0 to 1.0 (0% to 100% confidence). If any word is blurry, tilted, or ambiguous, the skill flags it immediately and gives you a visual dashboard where you can click on the word, see where it appears on the original page, and correct it with one click.
+This skill automatically evaluates every single word in your document and scores it on a scale from 0.0 to 1.0 (0% to 100% confidence). If any word is blurry, tilted, or ambiguous, the skill flags it immediately. You can review flagged words using an interactive visual dashboard or let Gemini 3.7 Flash analyze the surrounding sentence to suggest accurate corrections automatically.
 
 ---
 
 ### What the Skill Needs to Run
 
 To use this skill in an AI chat window, you only need to provide:
-1. **Your PDF File**: Either upload the PDF file directly to the chat, or provide the filename/path if it is already in your workspace (for example, `samples/sample_digital_invoice.pdf` or `samples/104-10062-10073.pdf`).
-2. **Your Goal in Plain English**: Tell the AI what you want to do (for example, extract the text, check for low-confidence words, or generate a visual dashboard).
+1. **Your PDF File**: Either upload the PDF file directly to the chat, or provide the filename/path if it is already in your workspace (for example, `samples/sample_digital_invoice.pdf` or `samples/sample_scanned_receipt.pdf`).
+2. **Your Goal in Plain English**: Tell the AI what you want to do (for example, extract the text, flag low-confidence words, or generate an interactive visual dashboard).
 3. **(Optional) Quality Cutoff**: If you have a specific accuracy requirement (such as "flag anything below 90% confidence"), mention it in your prompt.
-4. **(For Scanned Documents Only)**: If your document is a scan with no digital text layer, an OCR engine (such as Tesseract or the pure-Python RapidOCR engine) must be installed in the agent environment (`brew install tesseract` on macOS, `sudo apt-get install tesseract-ocr` on Linux, or `winget install UB-Mannheim.TesseractOCR` on Windows).
+4. **(Optional) Auto-Correction**: Ask the agent to use Gemini 3.7 Flash to review and correct low-confidence words.
+5. **(For Scanned Documents Only)**: If your document is a scan with no digital text layer, an OCR engine (such as Tesseract or the pure-Python RapidOCR engine) must be installed in the agent environment (`brew install tesseract` on macOS, `sudo apt-get install tesseract-ocr` on Linux, or `winget install UB-Mannheim.TesseractOCR` on Windows).
 
 ---
 
@@ -379,7 +439,8 @@ Follow these simple steps:
    - Overall document confidence score (for example, 98.5%).
    - How many words fell below your confidence cutoff.
    - A list of any suspicious or low-confidence words with their page numbers.
-5. **Step 5: Open the Visual Dashboard (Optional)**: If you asked for a dashboard, the AI will provide a link to an interactive web page (`invoice_dashboard.html`). In this dashboard, you can visually inspect each word, adjust the threshold slider, and correct any words directly on the page.
+   - Any suggested corrections provided by Gemini 3.7 Flash.
+5. **Step 5: Open the Visual Dashboard (Optional)**: If you asked for a dashboard, the AI will provide a link to an interactive web page (`invoice_dashboard.html`). In this dashboard, you can visually inspect each word, adjust the threshold slider, accept AI corrections with one click, or edit words manually.
 
 ---
 
@@ -389,10 +450,23 @@ The confidence score indicates how certain the computer vision and extraction mo
 
 Score Range | Meaning | Typical Scenario | Recommended Action
 :--- | :--- | :--- | :---
-`1.00 (100%)` | Perfect Certainty | Clean digital native text generated directly from Word, Google Docs, or modern billing systems. | No review needed.
+`1.00 (100%)` | Perfect Certainty | Clean digital native text generated directly from digital word processors, PDF generators, or billing systems. | No review needed.
 `0.85 - 0.99 (85% to 99%)` | High Certainty | Clean scans with clear fonts and standard resolution. | Generally accurate; minimal review.
-`0.70 - 0.84 (70% to 84%)` | Moderate Certainty | Scanned text with slight blur, minor rotation, or small fonts. | Recommended for quick human review.
-`< 0.70 (Below 70%)` | Low Certainty | Heavy noise, faint printing, smudges, complex stamps, or handwritten annotations. | Flagged in the Audit Queue for manual verification.
+`0.70 - 0.84 (70% to 84%)` | Moderate Certainty | Scanned text with slight blur, minor rotation, or small fonts. | Recommended for quick review or AI check.
+`< 0.70 (Below 70%)` | Low Certainty | Heavy noise, faint printing, smudges, complex stamps, or handwritten annotations. | Flagged in the Audit Queue for verification.
+
+---
+
+### Context-Aware AI Correction (Gemini 3.7 Flash)
+
+When text is scanned, OCR engines sometimes misread characters or introduce stray punctuation marks. Gemini 3.7 Flash reads the target word along with its surrounding sentence context (+/- 6 words) to understand the intended meaning:
+
+Example Scenario | OCR Misrecognition | Surrounding Context | Gemini 3.7 Flash Decision | Explanation
+:--- | :--- | :--- | :--- | :---
+Invoice Number | `INV-2O26` | "Invoice number INV-2O26 dated March" | Correct to `INV-2026` | Digit 0 misread as letter O in invoice code pattern.
+Stray Bracket | `12345)` | "Account number 12345) due upon receipt" | Correct to `12345` | Unmatched closing parenthesis without an opening bracket.
+Legitimate Punctuation | `Boulevard,` | "Located at 742 Evergreen Boulevard, Springfield" | Approve as `Boulevard,` | Valid comma separating address line; preserved as-is.
+Product Specification | `(3ct)` | "Contains 1 pack (3ct) organic lemons" | Approve as `(3ct)` | Balanced parentheses representing valid item count.
 
 ---
 
@@ -406,11 +480,11 @@ Here are sample prompts you can copy and paste directly into your AI chat window
 #### Example 2: Financial Invoice Quality Audit
 > "I uploaded an invoice `samples/sample_digital_invoice.pdf`. Extract the text, but flag any words that have a confidence score lower than 90%. List any low-confidence words in your response."
 
-#### Example 3: Scanned Document Review with Visual Dashboard
-> "Please process `samples/sample_scanned_receipt.pdf`. Since this is a scanned receipt, generate the interactive visual dashboard so I can review questionable words and make corrections."
+#### Example 3: Scanned Document Review with Visual Dashboard and AI Correction
+> "Please process `samples/sample_scanned_receipt.pdf`. Run the Gemini 3.7 Flash word correction pipeline to review questionable OCR tokens and generate the interactive visual dashboard."
 
-#### Example 4: Compliance and Multi-Page Sign-Off Verification
-> "Analyze `samples/sample_mixed_report.pdf` in auto mode. Tell me the average confidence score across all pages, check whether the compliance stamp on page 2 was read accurately, and save the result to `audit_report.json`."
+#### Example 4: Direct Auto-Correction with Summary
+> "Analyze `samples/sample_scanned_receipt.pdf` using OCR mode. Auto-apply corrections from Gemini for all words below 85% confidence and summarize what changes were made."
 
 #### Example 5: Historical Scanned Record OCR and Audit Queue
 > "Run the confidence extraction skill on `samples/104-10062-10073.pdf` using OCR mode at 85% threshold. Generate the interactive review dashboard so I can review flagged tokens in the audit queue."
@@ -423,46 +497,53 @@ When you run a prompt in your agent harness, the AI executes the skill and provi
 
 ```text
 User:
-Please extract the text from samples/sample_digital_invoice.pdf and check if there are any words below 85% confidence. Also generate a visual review dashboard.
+Please extract text from samples/sample_scanned_receipt.pdf, check for low-confidence words, and auto-correct them with Gemini. Also generate an interactive review dashboard.
 
 Agent:
-Extraction Summary for sample_digital_invoice.pdf:
+Extraction and Correction Summary for sample_scanned_receipt.pdf:
 - Total Pages: 1
-- Total Words Extracted: 116
-- Extraction Mode: Digital Native
-- Mean Confidence Score: 1.0 (100.0%)
-- Minimum Confidence Score: 1.0 (100.0%)
-- Low-Confidence Words (< 85%): 0
+- Total Words Extracted: 58
+- Extraction Mode: OCR (Optical Character Recognition)
+- Mean Confidence Score: 0.8840 (88.4%)
+- Low-Confidence Words (< 85%): 4
+- AI Corrections Identified: 3
+  1. 'INV-2O26' -> 'INV-2026' (OCR letter 'O' corrected to digit '0' in invoice code)
+  2. '12345)' -> '12345' (Stray closing parenthesis removed)
+  3. 'T0tal' -> 'Total' (Digit '0' corrected to letter 'o' in table label)
+- Approved As-Is: 1 ('Boulevard,' approved as valid address punctuation)
 
-All text in this document was extracted with 100% certainty from digital vector streams.
-The structured output file has been saved to: 'samples/sample_digital_invoice_extracted.json'
-The interactive review dashboard has been generated at: 'samples/sample_digital_invoice_dashboard.html'
+The structured output file has been saved to: 'samples/sample_scanned_receipt_extracted.json'
+The interactive review dashboard has been generated at: 'samples/sample_scanned_receipt_dashboard.html'
 ```
 
 ---
 
 ### How to Use the Visual Dashboard for Corrections
 
-If your document contains scanned pages or words scoring below the cutoff threshold, the generated HTML dashboard (`dashboard.html`) gives you a full human-in-the-loop review environment:
+If your document contains scanned pages or words scoring below the cutoff threshold, the generated HTML dashboard gives you a full human-in-the-loop review environment:
 
 1. **Adjusting the Cutoff Slider**:
    - At the top left, move the **Confidence Cutoff Threshold** slider (for example, from 85% to 90%).
    - The document view and word counters immediately re-highlight words that fall below the selected number.
 2. **Inspecting Words on the PDF Page**:
    - On the left pane, the original PDF page is displayed.
-   - Any word below your threshold is outlined in amber/red; words meeting the threshold have subtle green outlines.
+   - Any word below your threshold is outlined in amber/red; words meeting the threshold have subtle green outlines; AI-corrected words have blue outlines.
    - Click on any word box on the PDF page: the system selects that word and loads its details in the right-hand panel.
-3. **Making Manual Corrections**:
+3. **Using AI Auto-Correction**:
+   - Click **[Auto-Correct with Gemini]** in the header.
+   - If Option A (Staged Review) is active, review each proposed change in the table and click **[Apply All Approved Suggestions]**.
+   - If you want to check a single word, click **[AI Suggest]** in the Word Inspector card.
+4. **Making Manual Corrections**:
    - In the right-hand panel (**Document Text** tab), the **Word Inspection & Correction** card displays the current word, its exact confidence percentage, and its page coordinates.
    - Type the correct word into the text box and click **Apply** (or press Enter).
    - The word updates across the document immediately, its confidence score is updated to 100% (marked as human-corrected), and the low-confidence count decreases.
-4. **Using the Audit Queue**:
+5. **Using the Audit Queue**:
    - Click the **Audit Queue** tab in the right pane to see a clean list of all flagged words.
    - Click **Inspect** next to any word to jump directly to its location on the page.
-5. **Switching Light/Dark Modes**:
+6. **Switching Light/Dark Modes**:
    - Click the **[Dark Mode]** / **[Light Mode]** button in the upper right header to switch themes according to your preference.
-6. **Saving Your Work**:
-   - Click **Export Corrected JSON** in the top header. This downloads an updated JSON file containing all your manual edits and full audit trails ready for downstream business applications.
+7. **Saving Your Work**:
+   - Click **Export Corrected JSON** in the top header. This downloads an updated JSON file containing all your manual edits, AI corrections, and full audit trails ready for downstream business applications.
 
 ---
 
@@ -493,34 +574,40 @@ The output JSON contains four top-level sections:
     "filename": "sample_document.pdf",
     "total_pages": 2,
     "extraction_engine": "hybrid_extractor",
-    "timestamp_utc": "2026-08-28T12:00:00.000000+00:00",
+    "timestamp_utc": "2026-09-03T12:00:00.000000+00:00",
     "total_words": 142,
     "mean_confidence": 0.9850,
     "min_confidence": 0.7200,
     "low_confidence_count": 1,
-    "low_confidence_threshold": 0.85
+    "low_confidence_threshold": 0.85,
+    "llm_corrections_count": 1,
+    "llm_model": "gemini-3.7-flash"
   },
   "full_text": "Complete consolidated text from the entire document...",
   "pages": [
     {
       "page_number": 1,
-      "page_type": "digital",
+      "page_type": "ocr",
       "width": 612.0,
       "height": 792.0,
       "word_count": 85,
-      "mean_confidence": 1.0,
+      "mean_confidence": 0.9850,
       "text": "Page 1 extracted plain text...",
       "words": [
         {
-          "word": "Invoice",
+          "word": "INV-2026",
           "confidence": 1.0,
-          "source": "digital",
+          "source": "ocr",
           "bbox": {
             "x0": 54.0,
             "top": 72.0,
             "x1": 104.2,
             "bottom": 88.0
-          }
+          },
+          "llm_corrected": true,
+          "original_word": "INV-2O26",
+          "correction_source": "gemini_llm",
+          "correction_reason": "OCR letter 'O' corrected to digit '0' in invoice code"
         }
       ]
     }
@@ -553,16 +640,21 @@ Field | Type | Description
 `metadata.mean_confidence` | number | Overall average word confidence [0.0 to 1.0].
 `metadata.min_confidence` | number | Minimum confidence recorded across all words.
 `metadata.low_confidence_count` | integer | Number of words scoring below the cutoff threshold.
+`metadata.llm_corrections_count` | integer | Total count of words corrected via Gemini LLM.
+`metadata.llm_model` | string | Gemini model identifier used for corrections.
 `full_text` | string | Consolidated plain text for direct NLP/LLM ingestion.
 `pages[].words[].bbox` | object | Exact bounding box coordinates in PDF points (`x0`, `top`, `x1`, `bottom`).
 `pages[].words[].source` | string | Origin of token: `digital`, `ocr`, `cloud_docai`, or `cloud_textract`.
+`pages[].words[].llm_corrected` | boolean | Indicates whether token was corrected by the LLM.
+`pages[].words[].original_word` | string | Original word token before LLM or human correction.
+`pages[].words[].correction_reason` | string | Explanation of why token was corrected or approved.
 `low_confidence_words` | array | Filtered list of words requiring audit or verification.
 
 ---
 
 ## 10. Running the Test Suite
 
-The project includes an automated test suite verifying digital extraction, scanned/raster OCR extraction, confidence scoring boundaries, threshold filtering, CLI execution, HTML dashboard generation, and JSON schema compliance.
+The project includes an automated test suite verifying digital extraction, scanned/raster OCR extraction, confidence scoring boundaries, threshold filtering, CLI execution, HTML dashboard generation, LLM context windowing, prompt generation, mock/live LLM correction, Option A/B workflows, and JSON schema compliance.
 
 The tests are written using Python's standard library `unittest` framework, so they run out-of-the-box without requiring third-party test runners, while remaining fully compatible with `pytest`.
 
@@ -578,6 +670,7 @@ Or run individual test modules directly:
 
 ```bash
 python3 tests/test_extractor.py
+python3 tests/test_llm_correction.py
 python3 tests/test_schema.py
 ```
 
@@ -595,14 +688,21 @@ test_missing_ocr_fallback_handling (test_extractor.TestPDFConfidenceExtractor.te
 test_mixed_report_extraction (test_extractor.TestPDFConfidenceExtractor.test_mixed_report_extraction) ... ok
 test_ocr_scan_jfk_document (test_extractor.TestPDFConfidenceExtractor.test_ocr_scan_jfk_document) ... ok
 test_scanned_receipt_extraction (test_extractor.TestPDFConfidenceExtractor.test_scanned_receipt_extraction) ... ok
+test_cli_llm_flags_execution (test_llm_correction.TestLLMCorrectionEngine.test_cli_llm_flags_execution) ... ok
+test_context_window_extraction (test_llm_correction.TestLLMCorrectionEngine.test_context_window_extraction) ... ok
+test_default_model_identifier (test_llm_correction.TestLLMCorrectionEngine.test_default_model_identifier) ... ok
+test_option_a_staged_suggestions_attachment (test_llm_correction.TestLLMCorrectionEngine.test_option_a_staged_suggestions_attachment) ... ok
+test_option_b_direct_auto_apply (test_llm_correction.TestLLMCorrectionEngine.test_option_b_direct_auto_apply) ... ok
+test_prompt_generation_schema (test_llm_correction.TestLLMCorrectionEngine.test_prompt_generation_schema) ... ok
 test_invalid_confidence_range_rejected (test_schema.TestSchemaValidation.test_invalid_confidence_range_rejected) ... ok
 test_invalid_structure_rejected (test_schema.TestSchemaValidation.test_invalid_structure_rejected) ... ok
 test_schema_file_exists (test_schema.TestSchemaValidation.test_schema_file_exists) ... ok
 test_valid_digital_output_passes_validation (test_schema.TestSchemaValidation.test_valid_digital_output_passes_validation) ... ok
+test_valid_llm_corrected_output_passes_validation (test_schema.TestSchemaValidation.test_valid_llm_corrected_output_passes_validation) ... ok
 test_valid_mixed_output_passes_validation (test_schema.TestSchemaValidation.test_valid_mixed_output_passes_validation) ... ok
 
 ----------------------------------------------------------------------
-Ran 17 tests in 32.892s
+Ran 24 tests in 39.119s
 
 OK
 ```
@@ -629,8 +729,15 @@ tests/test_extractor.py::TestPDFConfidenceExtractor::test_cli_execution_with_htm
 tests/test_extractor.py::TestPDFConfidenceExtractor::test_ocr_scan_jfk_document PASSED
 tests/test_extractor.py::TestPDFConfidenceExtractor::test_missing_ocr_fallback_handling PASSED
 tests/test_extractor.py::TestPDFConfidenceExtractor::test_cli_execution_with_ocr_flags PASSED
+tests/test_llm_correction.py::TestLLMCorrectionEngine::test_context_window_extraction PASSED
+tests/test_llm_correction.py::TestLLMCorrectionEngine::test_prompt_generation_schema PASSED
+tests/test_llm_correction.py::TestLLMCorrectionEngine::test_option_a_staged_suggestions_attachment PASSED
+tests/test_llm_correction.py::TestLLMCorrectionEngine::test_option_b_direct_auto_apply PASSED
+tests/test_llm_correction.py::TestLLMCorrectionEngine::test_default_model_identifier PASSED
+tests/test_llm_correction.py::TestLLMCorrectionEngine::test_cli_llm_flags_execution PASSED
 tests/test_schema.py::TestSchemaValidation::test_schema_file_exists PASSED
 tests/test_schema.py::TestSchemaValidation::test_valid_digital_output_passes_validation PASSED
+tests/test_schema.py::TestSchemaValidation::test_valid_llm_corrected_output_passes_validation PASSED
 tests/test_schema.py::TestSchemaValidation::test_valid_mixed_output_passes_validation PASSED
 tests/test_schema.py::TestSchemaValidation::test_invalid_structure_rejected PASSED
 tests/test_schema.py::TestSchemaValidation::test_invalid_confidence_range_rejected PASSED

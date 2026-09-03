@@ -3,7 +3,7 @@
     "filename": "sample_scanned_receipt.pdf",
     "total_pages": 1,
     "extraction_engine": "hybrid_extractor",
-    "timestamp_utc": "2026-09-03T17:14:11.620135+00:00",
+    "timestamp_utc": "2026-09-03T17:53:30.607429+00:00",
     "total_words": 86,
     "mean_confidence": 0.9531,
     "min_confidence": 0.72,

@@ -96,8 +96,10 @@ pdf-extract-confidence-skill/
 │       ├── SKILL.md                       # Agent skill definition and runbook
 │       ├── ui/
 │       │   ├── index.html                 # Interactive UI Dashboard
-│       │   ├── styles.css                 # Responsive stylesheet (Light & Dark themes)
-│       │   └── app.js                     # Slider filtering, coordinate mapping, and HITL logic
+│       │   ├── styles.css                 # Responsive stylesheet (Light and Dark themes)
+│       │   ├── app.js                     # Slider filtering, coordinate mapping, and HITL logic
+│       │   ├── latest_data.js             # Embedded dataset cache for local UI preview
+│       │   └── latest_extraction.json     # Last extracted JSON document payload
 │       ├── scripts/
 │       │   ├── extract_pdf.py             # Core extraction engine, CLI, and HTML bundler
 │       │   ├── generate_samples.py        # Synthetic sample PDF generator
@@ -107,7 +109,7 @@ pdf-extract-confidence-skill/
 │       │   └── sample_output.json         # Reference JSON output structure
 │       └── references/
 │           ├── confidence_scoring.md      # Confidence scoring methodology
-│           └── cloud_adapters.md          # Cloud Document AI and AWS Textract guide
+│           └── cloud_adapters.md          # Cloud Document OCR adapters guide
 ├── samples/
 │   ├── 104-10062-10073.pdf                # Scanned historical record PDF (pure scan)
 │   ├── 104-10062-10073_extracted.json     # Extracted JSON with OCR word confidences

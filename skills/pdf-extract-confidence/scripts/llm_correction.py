@@ -24,7 +24,7 @@ logger = logging.getLogger("pdf_llm_corrector")
 
 class GeminiWordCorrector:
     """
-    Orchestrates batch and single-word LLM review queries to Google Gemini.
+    Orchestrates batch and single-word LLM review queries to Gemini.
     Zero-dependency implementation using standard library urllib.
     """
 
@@ -53,34 +53,86 @@ class GeminiWordCorrector:
         tokens = [w.get("word", "") for w in words_on_page[start:end]]
         return " ".join(tokens)
 
+    def crop_word_image_b64(
+        self,
+        image_data_uri: str,
+        bbox: Dict[str, float],
+        page_width: float,
+        page_height: float,
+        padding: float = 4.0,
+    ) -> Optional[str]:
+        """Crop word bounding box from page image data URI and return base64 JPEG."""
+        if not image_data_uri or not bbox:
+            return None
+        try:
+            import base64
+            import io
+            from PIL import Image
+
+            if "," in image_data_uri:
+                raw_b64 = image_data_uri.split(",", 1)[1]
+            else:
+                raw_b64 = image_data_uri
+
+            img_bytes = base64.b64decode(raw_b64)
+            pil_img = Image.open(io.BytesIO(img_bytes))
+
+            scale_x = pil_img.width / max(1.0, page_width)
+            scale_y = pil_img.height / max(1.0, page_height)
+
+            x0 = max(0, int((bbox.get("x0", 0) - padding) * scale_x))
+            top = max(0, int((bbox.get("top", 0) - padding) * scale_y))
+            x1 = min(pil_img.width, int((bbox.get("x1", page_width) + padding) * scale_x))
+            bottom = min(pil_img.height, int((bbox.get("bottom", page_height) + padding) * scale_y))
+
+            if x1 <= x0 or bottom <= top:
+                return None
+
+            crop_img = pil_img.crop((x0, top, x1, bottom))
+            buf = io.BytesIO()
+            crop_img.save(buf, format="JPEG", quality=85)
+            return base64.b64encode(buf.getvalue()).decode("ascii")
+        except Exception as ex:
+            logger.debug("Could not crop word image: %s", ex)
+            return None
+
     def generate_correction_prompt(self, items: List[Dict[str, Any]]) -> str:
-        """Build a compact structured prompt for Gemini OCR post-correction."""
+        """Build a compact structured prompt for visual Gemini OCR post-correction."""
         prompt_lines = [
-            "You are an expert document quality auditor and OCR text post-correction engine.",
+            "You are an expert visual document quality auditor and OCR text post-correction engine.",
             "Analyze the following low-confidence words detected in a PDF extraction.",
-            "Your task is to fix OCR recognition errors and remove OCR artifacts while preserving valid domain terms.",
+            "For each item, inspect the attached cropped image of the word and determine whether the OCR engine made a misrecognition or added stray punctuation noise that should be stripped.",
             "",
-            "Guidelines:",
-            "1. OCR Character Confusions (action: \"correct\"): Recover genuine spellings from common OCR substitutions:",
-            "   - 'G'/'R' misread as 'C'/'A' (e.g., \"CATECOAY:\" -> \"CATEGORY:\", \"CATECOAY\" -> \"CATEGORY\")",
+            "CRITICAL INSTRUCTIONS:",
+            "1. Punctuation & Noise Artifacts (action: \"correct\"): Recover genuine printed words by removing OCR noise:",
+            "   - If the OCR engine attached a trailing colon ':', parenthesis ')', bracket ']', or comma ',' that is NOT in the image:",
+            "     * Image shows \"Larry\" but OCR extracted \"Larry:\" -> output \"Larry\"",
+            "     * Image shows \"12345\" but OCR extracted \"12345)\" -> output \"12345\"",
+            "     * Image shows \"Boulevard\" but OCR extracted \"Boulevard,\" -> output \"Boulevard\"",
+            "     * Image shows \"ER\" but OCR extracted \"ER),\" -> output \"ER\"",
+            "     * Image shows \"Item\" but OCR extracted \"Item]\" -> output \"Item\"",
+            "     * Stray pipes/tildes: \"|Item\" -> \"Item\", \"~Invoice\" -> \"Invoice\"",
+            "2. OCR Character Confusions (action: \"correct\"): Recover genuine spellings from common OCR substitutions:",
+            "   - 'G'/'R' misread as 'C'/'A' (e.g., \"CATECOAY:\" -> \"CATEGORY\", \"CATECOAY\" -> \"CATEGORY\")",
             "   - 'N' misread as 'i' or '1' (e.g., \"iOTICE\" -> \"NOTICE\", \"1OTICE\" -> \"NOTICE\")",
             "   - Letter 'O' misread as digit '0' or vice-versa (e.g., \"INV-2O26\" -> \"INV-2026\", \"T0tal\" -> \"Total\")",
             "   - Letter 'l' misread as 'I' or '1' (e.g., \"BouIevard\" -> \"Boulevard\", \"RECE1PT\" -> \"RECEIPT\")",
             "   - Spliced/corrupted words (e.g., \"CLASSIF I ED\" -> \"CLASSIFIED\", \"SECRFT\" -> \"SECRET\")",
-            "2. Stray OCR Punctuation Artifacts (action: \"correct\"): Remove unmatched closing brackets/parens or stray noise:",
-            "   - \"ER),\" -> \"ER\" or \"PER\" if no opening '(' exists in the surrounding context",
-            "   - \"12345)\" -> \"12345\" if no opening '(' exists in the context",
-            "   - \"Item]\" -> \"Item\" if no opening '[' exists in the context",
-            "   - Stray pipes or tildes: \"|Item\" -> \"Item\", \"~Invoice\" -> \"Invoice\"",
             "3. Legitimate Domain Terms (action: \"approve\"): Approve legitimate proper names, acronyms, or balanced punctuation:",
             "   - Balanced parentheticals (e.g. \"(3ct)\", \"(PER)\")",
-            "   - Legitimate sentence commas (e.g. \"Boulevard,\" before a city name, \"Inc.,\")",
             "   - Valid codes (e.g. \"TXN-1042\", \"APPROVED\")",
             "",
             "CRITICAL: If a word contains an OCR error or stray artifact, you MUST set action=\"correct\" and provide the clean corrected spelling in \"suggested_word\". Do NOT simply echo the corrupted token.",
             "",
             "Tokens to review:",
-            json.dumps(items, indent=2, ensure_ascii=False),
+            json.dumps([{
+                "index": it.get("index", idx),
+                "original_word": it.get("original_word", ""),
+                "confidence": it.get("confidence", 0.8),
+                "source": it.get("source", "ocr"),
+                "page": it.get("page", 1),
+                "surrounding_context": it.get("surrounding_context", "")
+            } for idx, it in enumerate(items)], indent=2, ensure_ascii=False),
             "",
             "Return a JSON array containing an evaluation object for each item with the following schema:",
             "[",
@@ -88,8 +140,8 @@ class GeminiWordCorrector:
             "    \"index\": <integer matching item index>,",
             "    \"original_word\": \"<string>\",",
             "    \"action\": \"correct\" | \"approve\",",
-            "    \"suggested_word\": \"<string, corrected spelling or original if approved>\",",
-            "    \"reason\": \"<concise 1-sentence explanation>\"",
+            "    \"suggested_word\": \"<string, clean corrected spelling or original if approved>\",",
+            "    \"reason\": \"<concise 1-sentence visual rationale>\"",
             "  }",
             "]",
         ]
@@ -104,18 +156,20 @@ class GeminiWordCorrector:
 
         # 1. Exact/Substring dictionary rules for common OCR misrecognitions
         exact_corrections = {
-            "CATECOAY:": ("CATEGORY:", "OCR letter 'C' and 'A' corrected to 'G' and 'R' in header label."),
+            "CATECOAY:": ("CATEGORY", "OCR letter 'C' and 'A' corrected to 'G' and 'R'; trailing colon stripped."),
             "CATECOAY": ("CATEGORY", "OCR letter 'C' and 'A' corrected to 'G' and 'R' in header label."),
             "iOTICE": ("NOTICE", "OCR lowercase 'i' corrected to uppercase 'N' in title."),
             "1OTICE": ("NOTICE", "OCR digit '1' corrected to uppercase 'N' in title."),
-            "iOTICE:": ("NOTICE:", "OCR lowercase 'i' corrected to uppercase 'N' in title."),
-            "1OTICE:": ("NOTICE:", "OCR digit '1' corrected to uppercase 'N' in title."),
+            "iOTICE:": ("NOTICE", "OCR lowercase 'i' corrected to uppercase 'N'; trailing colon stripped."),
+            "1OTICE:": ("NOTICE", "OCR digit '1' corrected to uppercase 'N'; trailing colon stripped."),
             "T0tal": ("Total", "OCR digit '0' corrected to letter 'o' in table label."),
             "T0TAL": ("TOTAL", "OCR digit '0' corrected to letter 'O' in table label."),
             "SUBT0TAL": ("SUBTOTAL", "OCR digit '0' corrected to letter 'O' in table label."),
             "RECE1PT": ("RECEIPT", "OCR digit '1' corrected to letter 'I' in header."),
             "BouIevard": ("Boulevard", "OCR uppercase 'I' corrected to lowercase 'l' in address."),
-            "BouIevard,": ("Boulevard,", "OCR uppercase 'I' corrected to lowercase 'l' in address."),
+            "BouIevard,": ("Boulevard", "OCR uppercase 'I' corrected to lowercase 'l'; trailing comma stripped."),
+            "Boulevard,": ("Boulevard", "Trailing punctuation comma stripped from word token."),
+            "Larry:": ("Larry", "OCR trailing colon artifact ':' removed from name."),
             "SECRFT": ("SECRET", "OCR letter 'F' corrected to 'E' in classification banner."),
             "DOClJMENT": ("DOCUMENT", "OCR broken glyph 'lJ' corrected to 'U'."),
             "DEPARTMEIIT": ("DEPARTMENT", "OCR broken glyph 'II' corrected to 'N'."),
@@ -150,57 +204,70 @@ class GeminiWordCorrector:
         if "INV-2O26" in word:
             return "correct", word.replace("2O26", "2026"), "OCR letter 'O' replaced with digit '0' in invoice code."
 
-        # 7. Stray quotes, backticks, or curly ticks on token edges (e.g. '‘but' -> 'but', 'in’' -> 'in', ''since' -> 'since', '‘6.' -> '6.')
+        # 7. Trailing colon on word (e.g. 'Larry:' -> 'Larry', 'Name:' -> 'Name')
+        if word.endswith(":") and len(word) > 1 and word not in ["http:", "https:"]:
+            return "correct", word[:-1], f"OCR trailing colon artifact ':' removed from '{word}'."
+
+        # 8. Stray quotes, backticks, or curly ticks on token edges (e.g. '‘but' -> 'but', 'in’' -> 'in', ''since' -> 'since', '‘6.' -> '6.')
         cleaned_ticks = re.sub(r"^[‘\'\"\`]+", "", word)
         cleaned_ticks = re.sub(r"[’\'\"\`]+$", "", cleaned_ticks)
         if cleaned_ticks != word and len(cleaned_ticks) > 0 and not (word.startswith("(") and word.endswith(")")):
             return "correct", cleaned_ticks, f"Stray quote/tick artifact removed from '{word}'."
 
-        # 8. Leading stray dashes or dots (e.g. '-Liebengood' -> 'Liebengood', '.following' -> 'following', '-DDO' -> 'DDO')
+        # 9. Leading stray dashes or dots (e.g. '-Liebengood' -> 'Liebengood', '.following' -> 'following', '-DDO' -> 'DDO')
         if word.startswith(("-", ".", "~", "^", "|", "•")) and len(word) > 1 and word[1].isalnum():
             return "correct", word.lstrip("-.~^|•"), f"Leading scan artifact removed from '{word}'."
 
-        # 9. Merged periods inside lowercase words (e.g. 'raised.a' -> 'raised a')
+        # 10. Merged periods inside lowercase words (e.g. 'raised.a' -> 'raised a')
         if re.search(r"[a-z]\.[a-z]", word):
             return "correct", word.replace(".", " "), f"Merged period in '{word}' separated into distinct words."
 
-        # 10. Trailing exclamation on numeric years (e.g. '1971!' -> '1971')
+        # 11. Trailing exclamation on numeric years (e.g. '1971!' -> '1971')
         if re.match(r"^\d{4}!$", word):
             return "correct", word[:-1], f"Stray exclamation mark on year trimmed from '{word}'."
 
-        # 11. Unmatched stray closing parentheses or brackets (e.g. 'ER),', 'church.)', 'from]', '12345)')
+        # 12. Unmatched stray closing parentheses or brackets (e.g. 'ER),', 'church.)', 'from]', '12345)')
         if not (word.startswith("(") and word.endswith(")")) and not (word.startswith("[") and word.endswith("]")):
             if (word.endswith(")") or word.endswith("),") or word.endswith(").") or word.endswith("]") or word.endswith("]!")) and "(" not in ctx and "[" not in ctx:
-                cleaned_punct = re.sub(r"[\)\]\}]+([,\.;:!\?]?)$", r"\1", word)
-                if cleaned_punct != word:
-                    return "correct", cleaned_punct, f"Unmatched closing bracket removed from '{word}'."
+                cleaned_punct = re.sub(r"[\)\]\}]+([,\.;:!\?]?)$", "", word)
+                if cleaned_punct != word and len(cleaned_punct) > 0:
+                    return "correct", cleaned_punct, f"Unmatched closing bracket artifact removed from '{word}'."
 
-        # 12. Check legitimate domain words and formatting
+        # 13. Trailing comma on standalone words (e.g. 'Boulevard,' -> 'Boulevard')
+        if word.endswith(",") and len(word) > 1 and not re.match(r"^\d+,\d+$", word):
+            return "correct", word[:-1], f"Trailing punctuation comma stripped from '{word}'."
+
+        # 14. Check legitimate domain words and formatting
         if word.startswith("***") or word.startswith("---") or word.startswith("==="):
             return "approve", word, "Valid decorative receipt boundary delimiter line."
 
-        if "Boulevard," in word or "Suite" in word or "TXN-" in word or "APPROVED" in word:
-            return "approve", word, "Legitimate address or status token verified within context."
+        if word in ["APPROVED", "Suite"] or word.startswith("TXN-"):
+            return "approve", word, "Legitimate status or address token verified within context."
 
         if (word.startswith("(") and word.endswith(")")) or (word.startswith("[") and word.endswith("]")):
             return "approve", word, "Balanced parenthetical specification approved as-is."
 
         return "approve", word, "Confirmed valid token spelling within line sentence context."
 
-    def _call_gemini_api(self, prompt: str) -> List[Dict[str, Any]]:
-        """Send a generateContent request to Gemini REST API."""
+    def _call_gemini_api(self, prompt_or_parts: Any) -> List[Dict[str, Any]]:
+        """Send a generateContent request to Gemini REST API with multimodal support."""
         if self.mock_mode or not self.api_key:
             if not self.mock_mode and not self.api_key:
                 logger.warning("No GEMINI_API_KEY provided; returning mock heuristic fallback.")
             return []
 
+        if isinstance(prompt_or_parts, str):
+            parts = [{"text": prompt_or_parts}]
+        elif isinstance(prompt_or_parts, list):
+            parts = prompt_or_parts
+        else:
+            parts = [prompt_or_parts]
+
         url = f"{self.API_BASE_URL}/{self.model}:generateContent?key={self.api_key}"
         payload = {
             "contents": [
                 {
-                    "parts": [
-                        {"text": prompt}
-                    ]
+                    "parts": parts
                 }
             ],
             "generationConfig": {
@@ -251,10 +318,18 @@ class GeminiWordCorrector:
 
         for p_idx, page in enumerate(pages):
             words = page.get("words", [])
+            page_img_uri = page.get("image_data")
+            p_width = page.get("width", 612.0)
+            p_height = page.get("height", 792.0)
+
             for w_idx, w in enumerate(words):
                 conf = w.get("confidence", 1.0)
                 if conf < thresh and not w.get("human_corrected") and not w.get("llm_corrected"):
                     ctx = self.extract_line_context(words, w_idx)
+                    crop_b64 = None
+                    if page_img_uri and "bbox" in w:
+                        crop_b64 = self.crop_word_image_b64(page_img_uri, w["bbox"], p_width, p_height)
+
                     items_to_review.append({
                         "index": len(items_to_review),
                         "original_word": w.get("word", ""),
@@ -262,6 +337,7 @@ class GeminiWordCorrector:
                         "source": w.get("source", "ocr"),
                         "page": page.get("page_number", p_idx + 1),
                         "surrounding_context": ctx,
+                        "crop_image": crop_b64,
                     })
                     item_mapping.append((p_idx, w_idx))
 
@@ -284,9 +360,20 @@ class GeminiWordCorrector:
                 })
             return self._enrich_suggestions(results, items_to_review, item_mapping)
 
-        # Call live Gemini model
+        # Call live multimodal Gemini model
         prompt = self.generate_correction_prompt(items_to_review)
-        raw_results = self._call_gemini_api(prompt)
+        multimodal_parts: List[Dict[str, Any]] = [{"text": prompt}]
+        for item in items_to_review:
+            if item.get("crop_image"):
+                multimodal_parts.append({"text": f"[Item {item['index']} Cropped Image for \"{item['original_word']}\"]:"})
+                multimodal_parts.append({
+                    "inline_data": {
+                        "mime_type": "image/jpeg",
+                        "data": item["crop_image"],
+                    }
+                })
+
+        raw_results = self._call_gemini_api(multimodal_parts)
         return self._enrich_suggestions(raw_results, items_to_review, item_mapping)
 
     def _enrich_suggestions(

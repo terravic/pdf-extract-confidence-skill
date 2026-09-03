@@ -821,16 +821,25 @@
     if (state.historyStack.length > 20) state.historyStack.shift();
   }
 
-  // Gemini REST API Caller
-  async function callGeminiApi(prompt) {
+  // Gemini Multimodal REST API Caller
+  async function callGeminiApi(promptOrParts) {
     if (!state.geminiApiKey) {
       // Mock / Offline Heuristic Mode
-      return generateMockAiResponses(prompt);
+      return generateMockAiResponses(typeof promptOrParts === "string" ? promptOrParts : (promptOrParts[0]?.text || ""));
+    }
+
+    let parts = [];
+    if (typeof promptOrParts === "string") {
+      parts = [{ text: promptOrParts }];
+    } else if (Array.isArray(promptOrParts)) {
+      parts = promptOrParts;
+    } else {
+      parts = [promptOrParts];
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.geminiModel}:generateContent?key=${state.geminiApiKey}`;
     const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts }],
       generationConfig: {
         temperature: 0.1,
         response_mime_type: "application/json"
@@ -853,24 +862,63 @@
     return JSON.parse(rawText);
   }
 
+  // Crop high-resolution image snippet of a specific word token from page image
+  function cropWordImage(pageNum, bbox, padding = 4) {
+    if (!bbox) return null;
+    const page = state.data.pages[pageNum - 1];
+    if (!page || !page.image_data) return null;
+
+    let cachedImg = pageImageCache.get(page.image_data);
+    if (!cachedImg || !cachedImg.complete || !cachedImg.naturalWidth) {
+      return null;
+    }
+
+    try {
+      const canvas = document.createElement("canvas");
+      const scaleX = cachedImg.naturalWidth / (page.width || 612);
+      const scaleY = cachedImg.naturalHeight / (page.height || 792);
+
+      const x0 = Math.max(0, (bbox.x0 - padding) * scaleX);
+      const top = Math.max(0, (bbox.top - padding) * scaleY);
+      const x1 = Math.min(cachedImg.naturalWidth, (bbox.x1 + padding) * scaleX);
+      const bottom = Math.min(cachedImg.naturalHeight, (bbox.bottom + padding) * scaleY);
+
+      const cropW = Math.max(1, x1 - x0);
+      const cropH = Math.max(1, bottom - top);
+
+      canvas.width = cropW;
+      canvas.height = cropH;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(cachedImg, x0, top, cropW, cropH, 0, 0, cropW, cropH);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      return dataUrl.replace(/^data:image\/jpeg;base64,/, "");
+    } catch (e) {
+      console.warn("Failed to crop word image:", e);
+      return null;
+    }
+  }
+
   // Rule-based OCR correction heuristic for offline mode or fallback
   function applyHeuristicOcrFix(word, context) {
     const ctx = context || "";
 
     // 1. Exact/Substring dictionary rules for common OCR misrecognitions
     const exactCorrections = {
-      "CATECOAY:": { suggested: "CATEGORY:", reason: "OCR letter 'C' and 'A' corrected to 'G' and 'R' in header label." },
+      "CATECOAY:": { suggested: "CATEGORY", reason: "OCR letter 'C' and 'A' corrected to 'G' and 'R'; trailing colon stripped." },
       "CATECOAY": { suggested: "CATEGORY", reason: "OCR letter 'C' and 'A' corrected to 'G' and 'R' in header label." },
       "iOTICE": { suggested: "NOTICE", reason: "OCR lowercase 'i' corrected to uppercase 'N' in title." },
       "1OTICE": { suggested: "NOTICE", reason: "OCR digit '1' corrected to uppercase 'N' in title." },
-      "iOTICE:": { suggested: "NOTICE:", reason: "OCR lowercase 'i' corrected to uppercase 'N' in title." },
-      "1OTICE:": { suggested: "NOTICE:", reason: "OCR digit '1' corrected to uppercase 'N' in title." },
+      "iOTICE:": { suggested: "NOTICE", reason: "OCR lowercase 'i' corrected to uppercase 'N'; trailing colon stripped." },
+      "1OTICE:": { suggested: "NOTICE", reason: "OCR digit '1' corrected to uppercase 'N'; trailing colon stripped." },
       "T0tal": { suggested: "Total", reason: "OCR digit '0' corrected to letter 'o' in table label." },
       "T0TAL": { suggested: "TOTAL", reason: "OCR digit '0' corrected to letter 'O' in table label." },
       "SUBT0TAL": { suggested: "SUBTOTAL", reason: "OCR digit '0' corrected to letter 'O' in table label." },
       "RECE1PT": { suggested: "RECEIPT", reason: "OCR digit '1' corrected to letter 'I' in header." },
       "BouIevard": { suggested: "Boulevard", reason: "OCR uppercase 'I' corrected to lowercase 'l' in address." },
-      "BouIevard,": { suggested: "Boulevard,", reason: "OCR uppercase 'I' corrected to lowercase 'l' in address." },
+      "BouIevard,": { suggested: "Boulevard", reason: "OCR uppercase 'I' corrected to lowercase 'l'; trailing comma stripped." },
+      "Boulevard,": { suggested: "Boulevard", reason: "Trailing punctuation comma stripped from word token." },
+      "Larry:": { suggested: "Larry", reason: "OCR trailing colon artifact ':' removed from name." },
       "SECRFT": { suggested: "SECRET", reason: "OCR letter 'F' corrected to 'E' in classification banner." },
       "DOClJMENT": { suggested: "DOCUMENT", reason: "OCR broken glyph 'lJ' corrected to 'U'." },
       "DEPARTMEIIT": { suggested: "DEPARTMENT", reason: "OCR broken glyph 'II' corrected to 'N'." },
@@ -896,7 +944,7 @@
       };
     }
 
-    // 3. Document ID header corruption (e.g. '[ro4-t0062-10073' -> '104-10062-10073')
+    // 3. Document ID header corruption
     if (word.includes("0062-10073")) {
       return {
         action: "correct",
@@ -905,7 +953,7 @@
       };
     }
 
-    // 4. Merged words in common phrasing (e.g. 'Asa result' -> 'As a')
+    // 4. Merged words in common phrasing
     if (word === "Asa" && ctx.includes("result")) {
       return {
         action: "correct",
@@ -914,7 +962,7 @@
       };
     }
 
-    // 5. Single-character OCR word confusions (e.g. 'ot' -> 'of')
+    // 5. Single-character OCR word confusions
     if (word === "ot" && (ctx.includes("Agency") || ctx.includes("out") || ctx.includes("part"))) {
       return {
         action: "correct",
@@ -923,7 +971,7 @@
       };
     }
 
-    // 6. Check for digit '0' inside uppercase word or letter 'O' inside numeric sequence
+    // 6. Year / alphanumeric code OCR digit/letter substitution
     if (word.includes("2O26")) {
       return {
         action: "correct",
@@ -939,7 +987,16 @@
       };
     }
 
-    // 7. Stray quotes, backticks, or curly ticks on token edges (e.g. '‘but' -> 'but', 'in’' -> 'in', ''since' -> 'since', '‘6.' -> '6.')
+    // 7. Trailing colon on word (e.g. 'Larry:' -> 'Larry', 'Name:' -> 'Name')
+    if (word.endsWith(":") && word.length > 1 && !["http:", "https:"].includes(word)) {
+      return {
+        action: "correct",
+        suggested_word: word.slice(0, -1),
+        reason: `OCR trailing colon artifact ':' removed from '${word}'.`
+      };
+    }
+
+    // 8. Stray quotes, backticks, or curly ticks on token edges
     const cleanedTicks = word.replace(/^[‘\'\"\`]+/, "").replace(/[’\'\"\`]+$/, "");
     if (cleanedTicks !== word && cleanedTicks.length > 0 && !(word.startsWith("(") && word.endsWith(")"))) {
       return {
@@ -949,7 +1006,7 @@
       };
     }
 
-    // 8. Leading stray dashes or dots (e.g. '-Liebengood' -> 'Liebengood', '.following' -> 'following', '-DDO' -> 'DDO')
+    // 9. Leading stray dashes, dots, tildes, pipes
     if (/^[-.~^|•][a-zA-Z0-9]/.test(word)) {
       return {
         action: "correct",
@@ -958,7 +1015,7 @@
       };
     }
 
-    // 9. Merged periods inside lowercase words (e.g. 'raised.a' -> 'raised a')
+    // 10. Merged periods inside lowercase words
     if (/[a-z]\.[a-z]/.test(word)) {
       return {
         action: "correct",
@@ -967,7 +1024,7 @@
       };
     }
 
-    // 10. Trailing exclamation on numeric years (e.g. '1971!' -> '1971')
+    // 11. Trailing exclamation on numeric years
     if (/^\d{4}!$/.test(word)) {
       return {
         action: "correct",
@@ -976,21 +1033,30 @@
       };
     }
 
-    // 11. Unmatched stray closing parentheses or brackets (e.g. 'ER),', 'church.)', 'from]', '12345)')
+    // 12. Unmatched stray closing parentheses or brackets (e.g. '12345)', 'ER),', 'church.)', 'from]')
     if (!(word.startsWith("(") && word.endsWith(")")) && !(word.startsWith("[") && word.endsWith("]"))) {
       if ((word.endsWith(")") || word.endsWith("),") || word.endsWith(").") || word.endsWith("]") || word.endsWith("]!")) && !ctx.includes("(") && !ctx.includes("[")) {
-        const cleanedPunct = word.replace(/[\)\]\}]+([,\.;:!\?]?)$/, "$1");
-        if (cleanedPunct !== word) {
+        const cleanedPunct = word.replace(/[\)\]\}]+([,\.;:!\?]?)$/, "");
+        if (cleanedPunct !== word && cleanedPunct.length > 0) {
           return {
             action: "correct",
             suggested_word: cleanedPunct,
-            reason: `Unmatched closing bracket removed from '${word}'.`
+            reason: `Unmatched closing bracket artifact removed from '${word}'.`
           };
         }
       }
     }
 
-    // 12. Check legitimate domain words and formatting
+    // 13. Trailing comma on standalone words (e.g. 'Boulevard,' -> 'Boulevard')
+    if (word.endsWith(",") && word.length > 1 && !/^\d+,\d+$/.test(word)) {
+      return {
+        action: "correct",
+        suggested_word: word.slice(0, -1),
+        reason: `Trailing punctuation comma stripped from '${word}'.`
+      };
+    }
+
+    // 14. Check legitimate domain words and formatting
     if (word.startsWith("***") || word.startsWith("---") || word.startsWith("===")) {
       return {
         action: "approve",
@@ -999,11 +1065,11 @@
       };
     }
 
-    if (word.includes("Boulevard,") || word.includes("Suite") || word.includes("TXN-") || word.includes("APPROVED")) {
+    if (word === "APPROVED" || word === "Suite" || word.startsWith("TXN-")) {
       return {
         action: "approve",
         suggested_word: word,
-        reason: "Legitimate address or status token verified within context."
+        reason: "Legitimate status or address token verified within context."
       };
     }
 
@@ -1026,7 +1092,16 @@
   function generateMockAiResponses(prompt) {
     try {
       const match = prompt.match(/Tokens to review:\s*(\[[\s\S]*?\])/);
-      if (!match) return [];
+      if (!match) {
+        // Check if single word prompt
+        const singleMatch = prompt.match(/OCR candidate extracted by engine:\s*"([^"]+)"/);
+        if (singleMatch) {
+          const w = singleMatch[1];
+          const fix = applyHeuristicOcrFix(w, "");
+          return [{ action: fix.action, suggested_word: fix.suggested_word, reason: fix.reason }];
+        }
+        return [];
+      }
       const items = JSON.parse(match[1]);
       return items.map(item => {
         const word = item.original_word;
@@ -1054,13 +1129,15 @@
       page.words.forEach((w, wIdx) => {
         if (w.confidence < state.threshold && !w.human_corrected && !w.llm_corrected) {
           const ctx = extractSurroundingContext(pIdx + 1, wIdx);
+          const cropImg = cropWordImage(pIdx + 1, w.bbox);
           list.push({
             index: list.length,
             original_word: w.word,
             confidence: w.confidence,
             source: w.source,
             page: page.page_number,
-            surrounding_context: ctx
+            surrounding_context: ctx,
+            crop_image: cropImg
           });
           mapping.push({ pageNum: pIdx + 1, wordIndex: wIdx, context: ctx });
         }
@@ -1077,31 +1154,31 @@
     if (btn) btn.innerHTML = "<span>Analyzing with Gemini...</span>";
 
     try {
-      const prompt = `You are an expert document quality auditor and OCR text post-correction engine.
+      const promptText = `You are an expert visual document quality auditor and OCR text post-correction engine.
 Analyze the following low-confidence words detected in a PDF extraction.
-Your task is to fix OCR recognition errors and remove OCR artifacts while preserving valid domain terms.
+For each item, inspect the attached cropped image of the word and determine whether the OCR engine made a misrecognition or added stray punctuation noise that should be stripped.
 
-Guidelines:
-1. OCR Character Confusions (action: "correct"): Recover genuine spellings from common OCR substitutions:
-   - 'G'/'R' misread as 'C'/'A' (e.g., "CATECOAY:" -> "CATEGORY:", "CATECOAY" -> "CATEGORY")
-   - 'N' misread as 'i' or '1' (e.g., "iOTICE" -> "NOTICE", "1OTICE" -> "NOTICE")
+CRITICAL INSTRUCTIONS:
+1. Punctuation & Noise Artifacts (action: "correct"):
+   - If the OCR engine added a trailing colon ':', parenthesis ')', bracket ']', or comma ',' that is NOT part of the printed word or was scanned from noise/specks (e.g. image shows "Larry" but OCR read "Larry:", image shows "12345" but OCR read "12345)", image shows "Boulevard" but OCR read "Boulevard,", image shows "ER" but OCR read "ER),"):
+     -> Set action="correct" and output the clean word in "suggested_word" (e.g. "Larry", "12345", "Boulevard", "ER").
+2. OCR Character Confusions (action: "correct"):
+   - 'G'/'R' misread as 'C'/'A' (e.g., "CATECOAY" -> "CATEGORY")
+   - 'N' misread as 'i' or '1' (e.g., "iOTICE" -> "NOTICE")
    - Letter 'O' misread as digit '0' or vice-versa (e.g., "INV-2O26" -> "INV-2026", "T0tal" -> "Total")
    - Letter 'l' misread as 'I' or '1' (e.g., "BouIevard" -> "Boulevard", "RECE1PT" -> "RECEIPT")
-   - Spliced/corrupted words (e.g., "CLASSIF I ED" -> "CLASSIFIED", "SECRFT" -> "SECRET")
-2. Stray OCR Punctuation Artifacts (action: "correct"): Remove unmatched closing brackets/parens or stray noise:
-   - "ER)," -> "ER" or "PER" if no opening '(' exists in the surrounding context
-   - "12345)" -> "12345" if no opening '(' exists in the context
-   - "Item]" -> "Item" if no opening '[' exists in the context
-   - Stray pipes or tildes: "|Item" -> "Item", "~Invoice" -> "Invoice"
-3. Legitimate Domain Terms (action: "approve"): Approve legitimate proper names, acronyms, or balanced punctuation:
-   - Balanced parentheticals (e.g. "(3ct)", "(PER)")
-   - Legitimate sentence commas (e.g. "Boulevard," before a city name, "Inc.,")
-   - Valid codes (e.g. "TXN-1042", "APPROVED")
-
-CRITICAL: If a word contains an OCR error or stray artifact, you MUST set action="correct" and provide the clean corrected spelling in "suggested_word". Do NOT simply echo the corrupted token.
+3. Legitimate Domain Terms (action: "approve"):
+   - Balanced parentheticals (e.g. "(3ct)") or verified terms with intentional punctuation.
 
 Tokens to review:
-${JSON.stringify(list, null, 2)}
+${JSON.stringify(list.map(item => ({
+  index: item.index,
+  original_word: item.original_word,
+  confidence: item.confidence,
+  source: item.source,
+  page: item.page,
+  surrounding_context: item.surrounding_context
+})), null, 2)}
 
 Return a JSON array containing an evaluation object for each item:
 [
@@ -1109,12 +1186,25 @@ Return a JSON array containing an evaluation object for each item:
     "index": <integer matching item index>,
     "original_word": "<string>",
     "action": "correct" | "approve",
-    "suggested_word": "<string, corrected spelling or original if approved>",
-    "reason": "<concise 1-sentence explanation>"
+    "suggested_word": "<string, clean corrected spelling or original if approved>",
+    "reason": "<concise 1-sentence visual rationale>"
   }
 ]`;
 
-      const rawResults = await callGeminiApi(prompt);
+      const multimodalParts = [{ text: promptText }];
+      list.forEach(item => {
+        if (item.crop_image) {
+          multimodalParts.push({ text: `[Item ${item.index} Cropped Image for "${item.original_word}"]:` });
+          multimodalParts.push({
+            inline_data: {
+              mime_type: "image/jpeg",
+              data: item.crop_image
+            }
+          });
+        }
+      });
+
+      const rawResults = await callGeminiApi(multimodalParts);
       const resultMap = {};
       rawResults.forEach(r => { if (typeof r.index === "number") resultMap[r.index] = r; });
 
@@ -1126,7 +1216,7 @@ Return a JSON array containing an evaluation object for each item:
           original_word: item.original_word,
           suggested_word: res.suggested_word || item.original_word,
           action: res.action || "approve",
-          reason: res.reason || "Audited by Gemini agent.",
+          reason: res.reason || "Audited by Gemini visual agent.",
           confidence: item.confidence,
           context: mapping[i].context
         };
@@ -1139,7 +1229,6 @@ Return a JSON array containing an evaluation object for each item:
         applyAllAiSuggestions(false);
       } else {
         // Option A (Default): Populate Staged Review Table
-        // Switch to Audit tab to show staged recommendations
         dom.tabItems.forEach(t => {
           const isAudit = t.getAttribute("data-tab") === "tabAuditQueue";
           t.classList.toggle("active", isAudit);
@@ -1148,7 +1237,7 @@ Return a JSON array containing an evaluation object for each item:
           p.classList.toggle("active", p.id === "tabAuditQueue");
         });
         renderAuditQueue();
-        const modeNote = state.geminiApiKey ? `Gemini (${state.geminiModel})` : "Local OCR Heuristic Engine";
+        const modeNote = state.geminiApiKey ? `Gemini (${state.geminiModel}) Visual Review` : "Local OCR Heuristic Engine";
         showToast(`${modeNote} generated ${suggestions.length} suggestions. Click "Apply All" or inspect table.`);
       }
     } catch (err) {
@@ -1164,7 +1253,7 @@ Return a JSON array containing an evaluation object for each item:
     }
   }
 
-  // Single-Word Inspector AI Suggestion
+  // Single-Word Inspector AI Suggestion with Multimodal Visual Crop
   async function runSingleWordAiSuggest() {
     if (!state.selectedWordRef) return;
     const { pageNum, wordIndex } = state.selectedWordRef;
@@ -1173,24 +1262,32 @@ Return a JSON array containing an evaluation object for each item:
 
     const w = page.words[wordIndex];
     const ctx = extractSurroundingContext(pageNum, wordIndex);
+    const cropImg = cropWordImage(pageNum, w.bbox);
 
     if (dom.btnAiSuggest) dom.btnAiSuggest.textContent = "Checking...";
 
     try {
-      const prompt = `You are an expert OCR quality auditor.
-Target word token: "${w.word}" (Confidence: ${(w.confidence * 100).toFixed(1)}%, Source: ${w.source})
-Surrounding context: "${ctx}"
+      const promptText = `You are an expert visual document auditor and OCR post-correction engine.
+Attached is a high-resolution cropped image of the document token from the original page.
+OCR candidate extracted by engine: "${w.word}" (Confidence: ${(w.confidence * 100).toFixed(1)}%, Source: ${w.source})
+Surrounding line context: "${ctx}"
 
-Determine whether this token is an OCR misrecognition that should be corrected, or approved as-is.
-Guidelines:
-- If OCR misread letters (e.g. 'CATECOAY:' -> 'CATEGORY:', 'iOTICE' -> 'NOTICE', '2O26' -> '2026', 'T0tal' -> 'Total', 'BouIevard' -> 'Boulevard') or added stray unmatched brackets/punctuation (e.g. 'ER),' -> 'ER', '12345)' -> '12345'), set action="correct" and provide the clean suggested_word.
-- If the token is already correct in context, set action="approve" and keep suggested_word identical to "${w.word}".
+Instructions:
+1. Visually examine the attached cropped image of the word token.
+2. If the OCR engine added stray punctuation artifacts that are NOT part of the printed word in the image (such as trailing colon ':', closing bracket/parenthesis ')', comma ',', quote, or speck noise):
+   - If image shows "Larry" but OCR extracted "Larry:", output "Larry".
+   - If image shows "12345" but OCR extracted "12345)", output "12345".
+   - If image shows "Boulevard" but OCR extracted "Boulevard,", output "Boulevard".
+   - If image shows "ER" but OCR extracted "ER),", output "ER".
+   - Set action="correct" and suggested_word="<clean word>".
+3. If the OCR engine misread characters (e.g. '0' vs 'O', '1' vs 'I'/'l', 'CATECOAY' vs 'CATEGORY', 'iOTICE' vs 'NOTICE', 'INV-2O26' vs 'INV-2026'), correct to the genuine printed word from the image.
+4. If the token in text is 100% accurate to the image, set action="approve".
 
 Return a single JSON object:
 {
   "action": "correct" | "approve",
   "suggested_word": "<string>",
-  "reason": "<1-sentence rationale>"
+  "reason": "<1-sentence visual observation from image>"
 }`;
 
       let result;
@@ -1202,7 +1299,16 @@ Return a single JSON object:
           reason: fix.reason
         };
       } else {
-        const raw = await callGeminiApi(prompt);
+        const parts = [{ text: promptText }];
+        if (cropImg) {
+          parts.push({
+            inline_data: {
+              mime_type: "image/jpeg",
+              data: cropImg
+            }
+          });
+        }
+        const raw = await callGeminiApi(parts);
         result = Array.isArray(raw) ? raw[0] : raw;
       }
 

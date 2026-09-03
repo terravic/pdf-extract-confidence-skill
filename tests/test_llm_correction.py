@@ -151,5 +151,25 @@ class TestLLMCorrectionEngine(unittest.TestCase):
         self.assertGreater(len(output_data["llm_suggestions"]), 0)
 
 
+    def test_heuristic_ocr_fixes(self):
+        corrector = GeminiWordCorrector(mock_mode=True)
+        # Test punctuation/colon artifacts
+        self.assertEqual(corrector._apply_heuristic_ocr_fix("Larry:", "")[1], "Larry")
+        self.assertEqual(corrector._apply_heuristic_ocr_fix("12345)", "")[1], "12345")
+        self.assertEqual(corrector._apply_heuristic_ocr_fix("Boulevard,", "")[1], "Boulevard")
+        self.assertEqual(corrector._apply_heuristic_ocr_fix("ER),", "")[1], "ER")
+        self.assertEqual(corrector._apply_heuristic_ocr_fix("CATECOAY:", "")[1], "CATEGORY")
+        self.assertEqual(corrector._apply_heuristic_ocr_fix("iOTICE", "")[1], "NOTICE")
+        self.assertEqual(corrector._apply_heuristic_ocr_fix("T0tal", "")[1], "Total")
+
+    def test_multimodal_crop_helpers(self):
+        corrector = GeminiWordCorrector(mock_mode=True)
+        # Test with empty/invalid inputs
+        self.assertIsNone(corrector.crop_word_image_b64(None, {"x0": 0, "top": 0, "x1": 10, "bottom": 10}, 100, 100))
+        self.assertIsNone(corrector.crop_word_image_b64("data:image/png;base64,invalid", {}, 100, 100))
+
+
 if __name__ == "__main__":
     unittest.main()
+
+

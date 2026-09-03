@@ -3,7 +3,7 @@ window.__LATEST_EXTRACTION_DATA__ = {
     "filename": "sample_scanned_receipt.pdf",
     "total_pages": 1,
     "extraction_engine": "hybrid_extractor",
-    "timestamp_utc": "2026-09-03T19:21:45.470711+00:00",
+    "timestamp_utc": "2026-09-03T20:58:08.384046+00:00",
     "total_words": 86,
     "mean_confidence": 0.9531,
     "min_confidence": 0.72,
@@ -1184,9 +1184,9 @@ window.__LATEST_EXTRACTION_DATA__ = {
       "page": 1,
       "word_index": 52,
       "original_word": "(6.00%):",
-      "suggested_word": "(6.00%):",
-      "action": "approve",
-      "reason": "Confirmed valid token spelling within line sentence context.",
+      "suggested_word": "(6.00%)",
+      "action": "correct",
+      "reason": "OCR trailing colon artifact ':' removed from '(6.00%):'.",
       "confidence": 0.81
     },
     {
@@ -1195,7 +1195,7 @@ window.__LATEST_EXTRACTION_DATA__ = {
       "original_word": "TXN-20260828-99410",
       "suggested_word": "TXN-20260828-99410",
       "action": "approve",
-      "reason": "Legitimate address or status token verified within context.",
+      "reason": "Legitimate status or address token verified within context.",
       "confidence": 0.79
     },
     {

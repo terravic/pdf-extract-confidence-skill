@@ -735,6 +735,31 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=200,
         help="Rendering resolution (DPI) for OCR page rasterization (default: 200).",
     )
+    parser.add_argument(
+        "--llm-correct",
+        action="store_true",
+        help="Enable agentic LLM (Gemini) word correction for low confidence tokens.",
+    )
+    parser.add_argument(
+        "--gemini-api-key",
+        default=None,
+        help="Gemini API Key for LLM word correction (defaults to GEMINI_API_KEY environment variable).",
+    )
+    parser.add_argument(
+        "--llm-model",
+        default="gemini-3.7-flash",
+        help="Gemini model name for agentic correction (default: gemini-3.7-flash).",
+    )
+    parser.add_argument(
+        "--llm-auto-apply",
+        action="store_true",
+        help="Automatically apply all LLM suggestions directly to the text and word array (Option B).",
+    )
+    parser.add_argument(
+        "--mock-llm",
+        action="store_true",
+        help="Use mock heuristic LLM responses for offline execution and testing.",
+    )
     return parser
 
 
@@ -760,6 +785,21 @@ def main() -> int:
 
     output_dict = result.to_dict()
 
+    if args.llm_correct:
+        try:
+            from llm_correction import GeminiWordCorrector
+            corrector = GeminiWordCorrector(
+                api_key=args.gemini_api_key,
+                model=args.llm_model,
+                mock_mode=args.mock_llm,
+            )
+            logger.info("Executing agentic LLM word correction with model: %s...", args.llm_model)
+            suggestions = corrector.correct_low_confidence_tokens(output_dict, threshold=args.threshold)
+            logger.info("Agentic LLM generated %d word suggestions/approvals.", len(suggestions))
+            output_dict = corrector.apply_suggestions(output_dict, suggestions, auto_apply_all=args.llm_auto_apply)
+        except Exception as ex:
+            logger.warning("LLM correction failed or skipped: %s", ex)
+
     if args.validate:
         valid, error = validate_against_schema(output_dict)
         if not valid:
@@ -767,7 +807,7 @@ def main() -> int:
             return 2
         logger.info("Schema validation succeeded.")
 
-    json_str = result.to_json(indent=None if args.compact else 2)
+    json_str = json.dumps(output_dict, indent=None if args.compact else 2, ensure_ascii=False)
 
     if args.output:
         out_path = Path(args.output).resolve()

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "PDFWordConfidenceExtractionOutput",
-  "description": "Schema for PDF text extraction with normalized word-level confidence scores.",
+  "description": "Schema for PDF text extraction with normalized word-level confidence scores and agentic LLM correction metadata.",
   "type": "object",
   "required": [
     "metadata",
@@ -69,6 +69,30 @@
           "minimum": 0.0,
           "maximum": 1.0,
           "description": "The confidence score cutoff below which words are flagged."
+        },
+        "human_corrections_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of words manually verified or corrected by human reviewer."
+        },
+        "llm_corrections_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of words corrected by the agentic LLM model."
+        },
+        "llm_approved_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of low-confidence words confirmed and approved as-is by the LLM model."
+        },
+        "llm_model": {
+          "type": "string",
+          "description": "Identifier of the LLM model used for agentic word correction (e.g. gemini-3.7-flash)."
+        },
+        "last_modified_utc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 UTC timestamp of the latest review or correction."
         }
       },
       "additionalProperties": false
@@ -168,6 +192,34 @@
                   "type": "integer",
                   "minimum": 1,
                   "description": "Optional 1-based line number on the page."
+                },
+                "human_corrected": {
+                  "type": "boolean",
+                  "description": "True if this word was manually corrected or approved by a human reviewer."
+                },
+                "llm_corrected": {
+                  "type": "boolean",
+                  "description": "True if this word was corrected by the LLM agent."
+                },
+                "llm_approved": {
+                  "type": "boolean",
+                  "description": "True if low confidence token was confirmed as accurate by the LLM agent."
+                },
+                "original_word": {
+                  "type": "string",
+                  "description": "Original raw extracted word prior to correction."
+                },
+                "suggested_word": {
+                  "type": "string",
+                  "description": "Word spelling suggested by the LLM agent."
+                },
+                "correction_source": {
+                  "type": "string",
+                  "description": "Origin of correction: e.g. human, gemini-3.7-flash."
+                },
+                "correction_reason": {
+                  "type": "string",
+                  "description": "Rationale or explanation for the correction or approval."
                 }
               },
               "additionalProperties": false
@@ -209,7 +261,38 @@
           "reason": {
             "type": "string",
             "description": "Explanation for the lower confidence rating (e.g. ocr_uncertainty, encoding_anomaly, image_noise)."
+          },
+          "llm_suggestion": {
+            "type": "string",
+            "description": "Suggested spelling produced by the LLM model."
+          },
+          "llm_action": {
+            "type": "string",
+            "enum": ["correct", "approve", "uncertain"],
+            "description": "Recommended action from the LLM model."
+          },
+          "llm_reason": {
+            "type": "string",
+            "description": "LLM rationale for the suggested correction or approval."
           }
+        },
+        "additionalProperties": false
+      }
+    },
+    "llm_suggestions": {
+      "type": "array",
+      "description": "Optional list of LLM-generated audit suggestions for low-confidence tokens.",
+      "items": {
+        "type": "object",
+        "required": ["page", "word_index", "original_word", "suggested_word", "action", "reason"],
+        "properties": {
+          "page": { "type": "integer", "minimum": 1 },
+          "word_index": { "type": "integer", "minimum": 0 },
+          "original_word": { "type": "string" },
+          "suggested_word": { "type": "string" },
+          "action": { "type": "string", "enum": ["correct", "approve", "uncertain"] },
+          "reason": { "type": "string" },
+          "confidence": { "type": "number" }
         },
         "additionalProperties": false
       }

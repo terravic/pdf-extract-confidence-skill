@@ -14,7 +14,7 @@
       <div class="brand-logo-badge">PDF</div>
       <div class="brand-info">
         <h1 class="brand-title">Word-Level Confidence Reviewer</h1>
-        <span class="brand-subtitle">Visual Document Inspector & Human-in-the-Loop Verification</span>
+        <span class="brand-subtitle">Visual Document Inspector & Agentic LLM Verification</span>
       </div>
     </div>
 
@@ -25,6 +25,18 @@
       </button>
       <button class="btn" id="viewJsonBtn">
         View JSON
+      </button>
+      <button class="btn btn-ai-primary" id="btnAutoCorrectGemini" title="Run Agentic LLM Word Correction on Flagged Tokens">
+        <svg class="ai-sparkle-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+        </svg>
+        <span>Auto-Correct with Gemini</span>
+      </button>
+      <button class="btn btn-icon" id="btnGeminiSettings" title="Gemini Model & API Settings" aria-label="Gemini Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
       </button>
       <button class="btn btn-primary" id="exportJsonBtn">
         Export Corrected JSON
@@ -97,7 +109,17 @@
       </div>
       <div class="kpi-value-row">
         <span class="kpi-value" id="kpiCorrections">0</span>
-        <span class="kpi-badge corrected">Verified</span>
+        <span class="kpi-badge corrected">Manual</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" id="kpiAiCard">
+      <div class="kpi-header">
+        <span class="kpi-title">LLM Verified / Fixed</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-value" id="kpiAiCorrections">0</span>
+        <span class="kpi-badge ai" id="kpiAiBadge">Gemini</span>
       </div>
     </div>
   </section>
@@ -120,9 +142,10 @@
       <div class="view-filter-group">
         <span class="control-label">Filter:</span>
         <div class="btn-group">
-          <button class="filter-btn active" id="btnFilterAll" data-filter="all">All Words (<span id="countAll">0</span>)</button>
-          <button class="filter-btn" id="btnFilterLow" data-filter="low">Low Confidence (<span id="countLow">0</span>)</button>
-          <button class="filter-btn" id="btnFilterCorrected" data-filter="corrected">Corrected (<span id="countCorrected">0</span>)</button>
+          <button class="filter-btn active" id="btnFilterAll" data-filter="all">All (<span id="countAll">0</span>)</button>
+          <button class="filter-btn" id="btnFilterLow" data-filter="low">Low Conf (<span id="countLow">0</span>)</button>
+          <button class="filter-btn" id="btnFilterCorrected" data-filter="corrected">Manual (<span id="countCorrected">0</span>)</button>
+          <button class="filter-btn" id="btnFilterAi" data-filter="ai">LLM (<span id="countAi">0</span>)</button>
         </div>
       </div>
     </div>
@@ -168,7 +191,7 @@
         <button class="tab-item active" data-tab="tabDocumentText">Document Text</button>
         <button class="tab-item" data-tab="tabFullText">Full Plain Text</button>
         <button class="tab-item" data-tab="tabJsonOutput">JSON Output</button>
-        <button class="tab-item" data-tab="tabAuditQueue">Audit Queue (<span id="auditTabBadge">0</span>)</button>
+        <button class="tab-item" data-tab="tabAuditQueue">Audit &amp; LLM Queue (<span id="auditTabBadge">0</span>)</button>
       </nav>
 
       <!-- Tab 1: Text View and Inspector -->
@@ -177,7 +200,7 @@
         <!-- Inspector Card -->
         <div class="inspector-card-box" id="inspectorCard" style="display: none;">
           <div class="inspector-header-row">
-            <span class="inspector-badge-title">Word Inspector & Correction</span>
+            <span class="inspector-badge-title">Word Inspector &amp; Correction</span>
           </div>
 
           <div class="word-focus-display">
@@ -206,10 +229,38 @@
             </div>
           </div>
 
+          <!-- HITL Edit Actions -->
           <div class="hitl-edit-row">
             <input type="text" id="inspEditInput" class="hitl-input" placeholder="Type manual correction...">
             <button class="btn btn-primary btn-sm" id="applyCorrectionBtn">Apply</button>
             <button class="btn btn-sm" id="approveBtn">Approve</button>
+            <button class="btn btn-ai-sm" id="btnAiSuggest" title="Ask Gemini to inspect and suggest correction for this word">
+              <svg class="ai-sparkle-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+              </svg>
+              <span>AI Suggest</span>
+            </button>
+          </div>
+
+          <!-- AI Suggestion Box inside Inspector -->
+          <div class="ai-suggestion-box" id="inspAiSuggestionBox" style="display: none;">
+            <div class="ai-suggestion-header">
+              <span class="ai-suggestion-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4"/>
+                </svg>
+                Gemini Recommendation:
+              </span>
+              <span class="kpi-badge" id="inspAiActionBadge">Suggest Correct</span>
+            </div>
+            <div class="ai-suggestion-body">
+              <div class="ai-suggestion-word" id="inspAiSuggestedWord">-</div>
+              <div class="ai-suggestion-reason" id="inspAiReason">-</div>
+            </div>
+            <div class="ai-suggestion-footer">
+              <button class="btn btn-primary btn-sm" id="btnAcceptAiSuggestion">Accept Suggestion</button>
+              <button class="btn btn-sm" id="btnDismissAiSuggestion">Dismiss</button>
+            </div>
           </div>
 
           <div class="nav-buttons-row">
@@ -221,7 +272,7 @@
         <div class="inspector-card-box" id="inspectorEmpty">
           <div class="inspector-badge-title" style="margin-bottom: 6px;">Select a Word Token</div>
           <p style="font-size: 12px; color: var(--text-muted);">
-            Click on any word on the visual document sheet on the left or click a word chip below to inspect coordinates, view confidence details, and make corrections.
+            Click on any word on the visual document sheet on the left or click a word chip below to inspect coordinates, view confidence details, and make corrections or request AI suggestions.
           </p>
         </div>
 
@@ -268,24 +319,126 @@
         <pre class="code-viewer" id="jsonTabCodeDisplay" style="max-height: 520px;"></pre>
       </div>
 
-      <!-- Tab 4: Audit Review Queue -->
+      <!-- Tab 4: Audit & LLM Review Queue -->
       <div class="tab-pane-content" id="tabAuditQueue">
-        <div style="font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 6px;">
-          Low Confidence Review Items
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <div>
+            <div style="font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);">
+              Low Confidence &amp; AI Audit Queue
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+              Review low confidence tokens manually or execute Agentic LLM auto-correction.
+            </p>
+          </div>
+          <button class="btn btn-ai-sm" id="btnRunAuditAi">
+            <svg class="ai-sparkle-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4"/>
+            </svg>
+            <span>Run Gemini Review</span>
+          </button>
         </div>
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-          Tokens currently scoring below the global threshold cutoff. Click any row to jump directly to its location on the document page.
-        </p>
+
+        <!-- AI Review Action Banner & Controls -->
+        <div class="ai-queue-banner" id="aiQueueBanner" style="display: none;">
+          <div class="ai-queue-banner-left">
+            <span class="ai-queue-status-text" id="aiQueueStatusText">Gemini generated recommendations for 0 tokens</span>
+          </div>
+          <div class="ai-queue-banner-actions">
+            <button class="btn btn-primary btn-sm" id="btnApplyAllAiSuggestions">Apply All Suggestions (1-Click)</button>
+            <button class="btn btn-sm" id="btnApplyCorrectionsOnly">Apply Corrections Only</button>
+            <button class="btn btn-sm" id="btnClearAiSuggestions">Clear AI</button>
+          </div>
+        </div>
 
         <div class="inspector-card-box" id="auditEmptyState" style="display: none;">
           <div style="font-weight: 600; font-size: 13px; color: var(--text-main); margin-bottom: 4px;">No Low-Confidence Tokens</div>
           <p style="font-size: 12px; color: var(--text-muted);">All extracted words in this document meet or exceed the selected threshold.</p>
         </div>
 
+        <!-- Staged AI Suggestions Review Table -->
+        <div class="ai-suggestions-table-wrapper" id="aiSuggestionsTableWrapper" style="display: none;">
+          <table class="ai-review-table">
+            <thead>
+              <tr>
+                <th style="width: 25px;">#</th>
+                <th>Token &amp; Context</th>
+                <th>Score</th>
+                <th>LLM Decision</th>
+                <th>Suggested Word</th>
+                <th>Rationale</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="aiReviewTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Traditional Audit List -->
         <div class="audit-list" id="auditListContainer"></div>
       </div>
     </section>
   </main>
+
+  <!-- Gemini Settings & API Configuration Modal -->
+  <div class="modal-overlay" id="geminiSettingsModal">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header-bar">
+        <span style="font-weight: 700; font-size: 14px;">Gemini LLM Word Correction Settings</span>
+        <button class="btn btn-sm" id="closeSettingsModalBtn">Close</button>
+      </div>
+      <div class="modal-content-area" style="padding: 16px;">
+        <div style="margin-bottom: 16px;">
+          <label for="geminiApiKeyInput" style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
+            Gemini API Key:
+          </label>
+          <div style="display: flex; gap: 8px;">
+            <input type="password" id="geminiApiKeyInput" class="hitl-input" placeholder="AIzaSy... (leave blank to use mock/offline mode)" style="flex: 1;">
+            <button class="btn btn-sm" id="toggleApiKeyVisibilityBtn">Show</button>
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">
+            Your key is kept strictly in your local browser session and never sent to external third parties.
+          </span>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label for="geminiModelSelect" style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
+            Gemini Model Identifier:
+          </label>
+          <select id="geminiModelSelect" class="hitl-input" style="width: 100%;">
+            <option value="gemini-3.7-flash" selected>Gemini 3.7 Flash (Default - Highest Quality & Speed)</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deep Reasoning)</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">
+            Execution Workflow Mode:
+          </label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-secondary); cursor: pointer;">
+              <input type="radio" name="aiWorkflowMode" value="staged" checked id="radioModeStaged">
+              <div>
+                <strong>Option A: Staged Review Table (Default)</strong>
+                <div style="color: var(--text-muted); font-size: 11px;">Presents an interactive AI review queue with 1-click "Apply All" or individual approval.</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-secondary); cursor: pointer;">
+              <input type="radio" name="aiWorkflowMode" value="direct" id="radioModeDirect">
+              <div>
+                <strong>Option B: Direct Auto-Apply</strong>
+                <div style="color: var(--text-muted); font-size: 11px;">Instantly applies all LLM corrections with a 1-click "Undo" restore stack.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer-bar">
+        <button class="btn btn-sm" id="btnCancelSettings">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="btnSaveGeminiSettings">Save Settings</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Structured JSON Modal -->
   <div class="modal-overlay" id="jsonModal">

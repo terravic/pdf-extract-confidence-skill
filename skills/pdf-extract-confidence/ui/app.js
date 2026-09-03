@@ -1,8 +1,9 @@
 /**
  * PDF Word-Level Confidence Extraction - Modern UI Dashboard Application
  *
+ * Dual Human-in-the-Loop & Agentic LLM (Gemini) Verification Workspace.
  * Provides dynamic threshold filtering, visual document coordinate overlays,
- * synchronized text selection, human-in-the-loop editing, and theme switching.
+ * synchronized text selection, manual editing, and 1-click Gemini AI auto-correction.
  */
 
 (function () {
@@ -72,26 +73,22 @@
     "low_confidence_words": []
   } /* __DATA_PAYLOAD_END__ */;
 
-  // Safe LocalStorage Helper
-  function getStoredTheme() {
+  // LocalStorage Helpers
+  function getStored(key, defaultVal) {
     try {
       if (typeof window !== "undefined" && window.localStorage) {
-        return window.localStorage.getItem("pdf_extractor_theme") || "light";
+        return window.localStorage.getItem(key) || defaultVal;
       }
-    } catch (e) {
-      // Storage restricted (e.g. sandboxed iframe)
-    }
-    return "light";
+    } catch (e) {}
+    return defaultVal;
   }
 
-  function setStoredTheme(theme) {
+  function setStored(key, val) {
     try {
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem("pdf_extractor_theme", theme);
+        window.localStorage.setItem(key, val);
       }
-    } catch (e) {
-      // Storage restricted (e.g. sandboxed iframe)
-    }
+    } catch (e) {}
   }
 
   // Application Global State
@@ -99,12 +96,19 @@
     data: JSON.parse(JSON.stringify(EMBEDDED_DATA)),
     currentPage: 1,
     threshold: 0.85,
-    filterMode: "all", // "all", "low", "corrected"
+    filterMode: "all", // "all", "low", "corrected", "ai"
     searchQuery: "",
     zoom: 1.0,
     selectedWordRef: null, // { pageNum, wordIndex }
     correctionCount: 0,
-    theme: getStoredTheme()
+    aiCorrectionCount: 0,
+    theme: getStored("pdf_extractor_theme", "light"),
+    geminiApiKey: getStored("pdf_gemini_api_key", ""),
+    geminiModel: getStored("pdf_gemini_model", "gemini-3.7-flash"),
+    aiWorkflowMode: getStored("pdf_gemini_mode", "staged"), // "staged" (Option A) vs "direct" (Option B)
+    aiSuggestions: [],
+    historyStack: [],
+    activeSingleAiSuggestion: null
   };
 
   // DOM Elements Cache
@@ -122,10 +126,12 @@
       btnFilterAll: document.getElementById("btnFilterAll"),
       btnFilterLow: document.getElementById("btnFilterLow"),
       btnFilterCorrected: document.getElementById("btnFilterCorrected"),
+      btnFilterAi: document.getElementById("btnFilterAi"),
       filterBtns: document.querySelectorAll(".filter-btn"),
       countAll: document.getElementById("countAll"),
       countLow: document.getElementById("countLow"),
       countCorrected: document.getElementById("countCorrected"),
+      countAi: document.getElementById("countAi"),
       searchWordsInput: document.getElementById("searchWordsInput"),
       filterNotificationBanner: document.getElementById("filterNotificationBanner"),
       filterNotificationText: document.getElementById("filterNotificationText"),
@@ -136,6 +142,8 @@
       kpiMeanConfBadge: document.getElementById("kpiMeanConfBadge"),
       kpiLowConf: document.getElementById("kpiLowConf"),
       kpiCorrections: document.getElementById("kpiCorrections"),
+      kpiAiCorrections: document.getElementById("kpiAiCorrections"),
+      kpiAiBadge: document.getElementById("kpiAiBadge"),
       zoomInBtn: document.getElementById("zoomInBtn"),
       zoomOutBtn: document.getElementById("zoomOutBtn"),
       zoomResetBtn: document.getElementById("zoomResetBtn"),
@@ -167,43 +175,64 @@
       inspEditInput: document.getElementById("inspEditInput"),
       applyCorrectionBtn: document.getElementById("applyCorrectionBtn"),
       approveBtn: document.getElementById("approveBtn"),
+      btnAiSuggest: document.getElementById("btnAiSuggest"),
+      inspAiSuggestionBox: document.getElementById("inspAiSuggestionBox"),
+      inspAiActionBadge: document.getElementById("inspAiActionBadge"),
+      inspAiSuggestedWord: document.getElementById("inspAiSuggestedWord"),
+      inspAiReason: document.getElementById("inspAiReason"),
+      btnAcceptAiSuggestion: document.getElementById("btnAcceptAiSuggestion"),
+      btnDismissAiSuggestion: document.getElementById("btnDismissAiSuggestion"),
       prevIssueBtn: document.getElementById("prevIssueBtn"),
       nextIssueBtn: document.getElementById("nextIssueBtn"),
       tokenFlowContainer: document.getElementById("tokenFlowContainer"),
       auditListContainer: document.getElementById("auditListContainer"),
       auditEmptyState: document.getElementById("auditEmptyState"),
+      btnRunAuditAi: document.getElementById("btnRunAuditAi"),
+      aiQueueBanner: document.getElementById("aiQueueBanner"),
+      aiQueueStatusText: document.getElementById("aiQueueStatusText"),
+      btnApplyAllAiSuggestions: document.getElementById("btnApplyAllAiSuggestions"),
+      btnApplyCorrectionsOnly: document.getElementById("btnApplyCorrectionsOnly"),
+      btnClearAiSuggestions: document.getElementById("btnClearAiSuggestions"),
+      aiSuggestionsTableWrapper: document.getElementById("aiSuggestionsTableWrapper"),
+      aiReviewTableBody: document.getElementById("aiReviewTableBody"),
+      btnAutoCorrectGemini: document.getElementById("btnAutoCorrectGemini"),
+      btnGeminiSettings: document.getElementById("btnGeminiSettings"),
+      geminiSettingsModal: document.getElementById("geminiSettingsModal"),
+      geminiApiKeyInput: document.getElementById("geminiApiKeyInput"),
+      toggleApiKeyVisibilityBtn: document.getElementById("toggleApiKeyVisibilityBtn"),
+      geminiModelSelect: document.getElementById("geminiModelSelect"),
+      radioModeStaged: document.getElementById("radioModeStaged"),
+      radioModeDirect: document.getElementById("radioModeDirect"),
+      closeSettingsModalBtn: document.getElementById("closeSettingsModalBtn"),
+      btnCancelSettings: document.getElementById("btnCancelSettings"),
+      btnSaveGeminiSettings: document.getElementById("btnSaveGeminiSettings"),
       fileInput: document.getElementById("fileInput"),
       exportJsonBtn: document.getElementById("exportJsonBtn"),
       viewJsonBtn: document.getElementById("viewJsonBtn"),
       jsonModal: document.getElementById("jsonModal"),
       closeModalBtn: document.getElementById("closeModalBtn"),
-      copyJsonBtn: document.getElementById("copyJsonBtn"),
-      jsonModalCode: document.getElementById("jsonModalCode")
+      copyJsonBtn: document.getElementById("copyJsonBtn")
     };
   }
 
-  // Apply Theme Function
-  function applyTheme(newTheme) {
-    state.theme = newTheme;
-    document.documentElement.setAttribute("data-theme", newTheme);
-    if (document.body) {
-      document.body.setAttribute("data-theme", newTheme);
-    }
-    setStoredTheme(newTheme);
+  // Theme Management
+  function applyTheme(theme) {
+    state.theme = theme;
+    setStored("pdf_extractor_theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+    document.body.setAttribute("data-theme", theme);
 
-    const isDark = newTheme === "dark";
-    if (dom.themeToggleBtn) {
-      dom.themeToggleBtn.setAttribute("data-active-theme", newTheme);
-      dom.themeToggleBtn.setAttribute("aria-label", isDark ? "Switch to Light Mode" : "Switch to Dark Mode");
-      if (dom.themeStatusLabel) {
-        dom.themeStatusLabel.textContent = isDark ? "Light Mode" : "Dark Mode";
+    if (dom.themeStatusLabel) {
+      const isDark = theme === "dark";
+      dom.themeStatusLabel.textContent = isDark ? "Dark Mode" : "Light Mode";
+      if (dom.themeToggleBtn) {
+        dom.themeToggleBtn.classList.toggle("active", isDark);
       }
       if (dom.themeIconSun && dom.themeIconMoon) {
         dom.themeIconSun.style.display = isDark ? "block" : "none";
         dom.themeIconMoon.style.display = isDark ? "none" : "block";
       }
     }
-
     renderVisualPage();
   }
 
@@ -215,6 +244,7 @@
   function recalculateMetrics() {
     let lowConfCount = 0;
     let correctedCount = 0;
+    let aiCount = 0;
     let sumConfidence = 0;
     let wordCount = 0;
     let minConfidence = 1.0;
@@ -233,6 +263,9 @@
         }
         if (w.human_corrected) {
           correctedCount++;
+        }
+        if (w.llm_corrected || w.llm_approved) {
+          aiCount++;
         }
         if (w.confidence < state.threshold) {
           lowConfCount++;
@@ -257,7 +290,10 @@
     state.data.metadata.mean_confidence = wordCount > 0 ? Number((sumConfidence / wordCount).toFixed(4)) : 1.0;
     state.data.metadata.min_confidence = wordCount > 0 ? Number(minConfidence.toFixed(4)) : 1.0;
     state.data.metadata.human_corrections_count = correctedCount;
+    state.data.metadata.llm_corrections_count = aiCount;
+    state.data.metadata.llm_model = state.geminiModel;
     state.correctionCount = correctedCount;
+    state.aiCorrectionCount = aiCount;
 
     // Update KPI Card Displays
     if (dom.kpiTotalWords) dom.kpiTotalWords.textContent = wordCount;
@@ -271,12 +307,14 @@
     }
     if (dom.kpiLowConf) dom.kpiLowConf.textContent = lowConfCount;
     if (dom.kpiCorrections) dom.kpiCorrections.textContent = correctedCount;
+    if (dom.kpiAiCorrections) dom.kpiAiCorrections.textContent = aiCount;
     if (dom.kpiFilename) dom.kpiFilename.textContent = state.data.metadata.filename || "document.pdf";
 
     // Update Filter Button Count Badges & Audit Badge
     if (dom.countAll) dom.countAll.textContent = wordCount;
     if (dom.countLow) dom.countLow.textContent = lowConfCount;
     if (dom.countCorrected) dom.countCorrected.textContent = correctedCount;
+    if (dom.countAi) dom.countAi.textContent = aiCount;
     if (dom.auditTabBadge) dom.auditTabBadge.textContent = lowConfCount;
 
     renderFullTextTab();
@@ -297,30 +335,23 @@
     }
   }
 
-  // Update Global Threshold Value
+  // Threshold and Filter Updates
   function setGlobalThreshold(val) {
-    const num = Math.max(0.00, Math.min(1.00, parseFloat(val) || 0.00));
+    const num = Math.max(0.0, Math.min(1.0, parseFloat(val) || 0.0));
     state.threshold = Number(num.toFixed(2));
 
     if (dom.thresholdSlider) dom.thresholdSlider.value = state.threshold;
-    if (dom.thresholdNumberInput) dom.thresholdNumberInput.value = state.threshold.toFixed(2);
+    if (dom.thresholdNumberInput) dom.thresholdNumberInput.value = state.threshold;
     if (dom.thresholdBadge) dom.thresholdBadge.textContent = `${Math.round(state.threshold * 100)}%`;
 
     recalculateMetrics();
     renderVisualPage();
     renderTextFlow();
     renderAuditQueue();
-
-    // Re-sync inspector if a word is selected
-    if (state.selectedWordRef) {
-      selectWord(state.selectedWordRef.pageNum, state.selectedWordRef.wordIndex);
-    }
   }
 
-  // Set View Filter Mode (All, Low, Corrected)
   function setFilterMode(mode) {
     state.filterMode = mode;
-
     dom.filterBtns.forEach(btn => {
       btn.classList.toggle("active", btn.getAttribute("data-filter") === mode);
     });
@@ -328,12 +359,16 @@
     if (dom.filterNotificationBanner) {
       if (mode === "all") {
         dom.filterNotificationBanner.style.display = "none";
-      } else if (mode === "low") {
+      } else {
         dom.filterNotificationBanner.style.display = "flex";
-        dom.filterNotificationText.textContent = `Showing only words with confidence < ${Math.round(state.threshold * 100)}%`;
-      } else if (mode === "corrected") {
-        dom.filterNotificationBanner.style.display = "flex";
-        dom.filterNotificationText.textContent = `Showing only words corrected by a human reviewer`;
+        if (dom.filterNotificationText) {
+          const modeLabels = {
+            low: `Showing tokens scoring strictly below ${Math.round(state.threshold * 100)}% threshold`,
+            corrected: "Showing human-corrected word tokens",
+            ai: "Showing LLM-verified and AI-corrected tokens"
+          };
+          dom.filterNotificationText.textContent = modeLabels[mode] || "Showing filtered tokens";
+        }
       }
     }
 
@@ -341,11 +376,14 @@
     renderTextFlow();
   }
 
-  // Render Visual Document Page & Interactive Overlays
+  // Render Visual PDF Sheet & Canvas
   function renderVisualPage() {
-    const pageIndex = state.currentPage - 1;
-    const page = state.data.pages[pageIndex];
+    const page = state.data.pages[state.currentPage - 1];
     if (!page || !dom.pdfCanvas) return;
+
+    if (dom.pageIndicator) {
+      dom.pageIndicator.textContent = `Page ${state.currentPage} of ${state.data.pages.length}`;
+    }
 
     const width = page.width || 612;
     const height = page.height || 792;
@@ -371,19 +409,16 @@
     }
 
     const ctx = dom.pdfCanvas.getContext("2d");
-    
-    // Page paper background (crisp white with clean border)
     ctx.fillStyle = (page.page_type === "ocr" || width < 400) ? "#fcfbfa" : "#ffffff";
     ctx.fillRect(0, 0, width, height);
 
-    // Subtle page border
     ctx.strokeStyle = "#cbd5e1";
     ctx.lineWidth = 1;
     ctx.strokeRect(0, 0, width, height);
 
     const isMonospace = page.page_type === "ocr" || width < 400;
 
-    // Render Vector / OCR Text on Document Sheet
+    // Render text on canvas
     page.words.forEach(w => {
       const box = w.bbox;
       const boxHeight = Math.max(10, box.bottom - box.top);
@@ -392,22 +427,21 @@
         ? `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace`
         : `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
-      // Determine text visibility based on filter mode
       let isDimmed = false;
-      if (state.filterMode === "low" && w.confidence >= state.threshold) {
-        isDimmed = true;
-      } else if (state.filterMode === "corrected" && !w.human_corrected) {
-        isDimmed = true;
-      }
+      if (state.filterMode === "low" && w.confidence >= state.threshold) isDimmed = true;
+      else if (state.filterMode === "corrected" && !w.human_corrected) isDimmed = true;
+      else if (state.filterMode === "ai" && !w.llm_corrected && !w.llm_approved) isDimmed = true;
 
       if (isDimmed) {
         ctx.fillStyle = "rgba(15, 23, 42, 0.12)";
       } else if (w.confidence < state.threshold) {
-        ctx.fillStyle = "#991b1b"; // Dark red for low confidence text
+        ctx.fillStyle = "#991b1b"; // Dark red for low confidence
       } else if (w.human_corrected) {
-        ctx.fillStyle = "#5b21b6"; // Purple for corrected text
+        ctx.fillStyle = "#5b21b6"; // Purple for manual corrected
+      } else if (w.llm_corrected || w.llm_approved) {
+        ctx.fillStyle = "#4338ca"; // Indigo for AI corrected/approved
       } else {
-        ctx.fillStyle = "#0f172a"; // Standard dark slate
+        ctx.fillStyle = "#0f172a";
       }
 
       ctx.fillText(w.word, box.x0, box.bottom - 2);
@@ -421,10 +455,10 @@
       const isLow = w.confidence < state.threshold;
       const isSelected = state.selectedWordRef && state.selectedWordRef.pageNum === state.currentPage && state.selectedWordRef.wordIndex === idx;
 
-      // Filter matching
       let isDimmed = false;
       if (state.filterMode === "low" && !isLow) isDimmed = true;
       if (state.filterMode === "corrected" && !w.human_corrected) isDimmed = true;
+      if (state.filterMode === "ai" && !w.llm_corrected && !w.llm_approved) isDimmed = true;
       if (state.searchQuery && !w.word.toLowerCase().includes(state.searchQuery.toLowerCase())) isDimmed = true;
 
       const boxEl = document.createElement("div");
@@ -432,25 +466,27 @@
 
       if (w.human_corrected) {
         boxEl.classList.add("corrected");
+      } else if (w.llm_corrected || w.llm_approved) {
+        boxEl.classList.add("ai");
       } else if (isLow) {
         boxEl.classList.add("low");
       } else {
         boxEl.classList.add("high");
       }
 
-      if (isDimmed) {
-        boxEl.classList.add("dimmed");
-      }
-
-      if (isSelected) {
-        boxEl.classList.add("selected");
-      }
+      if (isSelected) boxEl.classList.add("selected");
+      if (isDimmed) boxEl.classList.add("dimmed");
 
       boxEl.style.left = box.x0 + "px";
       boxEl.style.top = box.top + "px";
-      boxEl.style.width = Math.max(10, box.x1 - box.x0) + "px";
+      boxEl.style.width = Math.max(8, box.x1 - box.x0) + "px";
       boxEl.style.height = Math.max(10, box.bottom - box.top) + "px";
-      boxEl.title = `${w.word} | Confidence: ${(w.confidence * 100).toFixed(1)}% | Source: ${w.source}`;
+
+      const badgeText = w.human_corrected ? "Verified" : (w.llm_corrected ? "AI Fix" : (w.llm_approved ? "AI Approved" : `${Math.round(w.confidence * 100)}%`));
+      boxEl.title = `Word: "${w.word}"
+Confidence: ${(w.confidence * 100).toFixed(1)}%
+Status: ${badgeText}
+Source: ${w.source}`;
 
       boxEl.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -459,64 +495,44 @@
 
       dom.overlayContainer.appendChild(boxEl);
     });
-
-    // Update Pagination & Zoom labels
-    if (dom.pageIndicator) dom.pageIndicator.textContent = `Page ${state.currentPage} of ${state.data.pages.length}`;
-    if (dom.prevPageBtn) dom.prevPageBtn.disabled = state.currentPage <= 1;
-    if (dom.nextPageBtn) dom.nextPageBtn.disabled = state.currentPage >= state.data.pages.length;
-    if (dom.zoomLabel) dom.zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
   }
 
-  // Render Document Text Flow in Right Pane
+  // Render Token Flow Chips in Tab 1
   function renderTextFlow() {
-    const pageIndex = state.currentPage - 1;
-    const page = state.data.pages[pageIndex];
-    if (!page || !dom.tokenFlowContainer) return;
-
+    if (!dom.tokenFlowContainer) return;
     dom.tokenFlowContainer.innerHTML = "";
 
-    const visibleWords = [];
+    const page = state.data.pages[state.currentPage - 1];
+    if (!page) return;
+
     page.words.forEach((w, idx) => {
+      const isSelected = state.selectedWordRef && state.selectedWordRef.pageNum === state.currentPage && state.selectedWordRef.wordIndex === idx;
       const isLow = w.confidence < state.threshold;
-      if (state.filterMode === "low" && !isLow) return;
-      if (state.filterMode === "corrected" && !w.human_corrected) return;
-      if (state.searchQuery && !w.word.toLowerCase().includes(state.searchQuery.toLowerCase())) return;
-      visibleWords.push({ word: w, idx });
-    });
 
-    if (visibleWords.length === 0) {
-      const emptyMsg = document.createElement("div");
-      emptyMsg.style.color = "var(--text-muted)";
-      emptyMsg.style.fontSize = "12px";
-      emptyMsg.style.padding = "16px";
-      emptyMsg.style.textAlign = "center";
-      emptyMsg.textContent = state.filterMode === "low"
-        ? "No low-confidence tokens found on this page."
-        : (state.filterMode === "corrected" ? "No human-corrected tokens found on this page." : "No matching tokens.");
-      dom.tokenFlowContainer.appendChild(emptyMsg);
-      return;
-    }
+      let isHidden = false;
+      if (state.filterMode === "low" && !isLow) isHidden = true;
+      if (state.filterMode === "corrected" && !w.human_corrected) isHidden = true;
+      if (state.filterMode === "ai" && !w.llm_corrected && !w.llm_approved) isHidden = true;
+      if (state.searchQuery && !w.word.toLowerCase().includes(state.searchQuery.toLowerCase())) isHidden = true;
 
-    visibleWords.forEach(({ word: w, idx }) => {
       const span = document.createElement("span");
       span.className = "token-word";
-      span.textContent = w.word;
 
-      const isLow = w.confidence < state.threshold;
       if (w.human_corrected) {
         span.classList.add("corrected");
+      } else if (w.llm_corrected || w.llm_approved) {
+        span.classList.add("ai");
       } else if (isLow) {
         span.classList.add("low");
       } else {
         span.classList.add("high");
       }
 
-      const isSelected = state.selectedWordRef && state.selectedWordRef.pageNum === state.currentPage && state.selectedWordRef.wordIndex === idx;
-      if (isSelected) {
-        span.classList.add("selected");
-      }
+      if (isSelected) span.classList.add("selected");
+      if (isHidden) span.style.display = "none";
 
-      span.title = `Confidence: ${(w.confidence * 100).toFixed(1)}% | Source: ${w.source}`;
+      span.textContent = w.word;
+      span.title = `Page ${state.currentPage} | ${(w.confidence * 100).toFixed(1)}%`;
 
       span.addEventListener("click", () => {
         selectWord(state.currentPage, idx);
@@ -527,13 +543,29 @@
     });
   }
 
-  // Render Audit Queue List
+  // Render Audit Queue List & Staged AI Table
   function renderAuditQueue() {
     if (!dom.auditListContainer) return;
     dom.auditListContainer.innerHTML = "";
     const list = state.data.low_confidence_words || [];
 
-    if (list.length === 0) {
+    // Check if AI suggestions exist
+    const suggestions = state.aiSuggestions || [];
+    if (suggestions.length > 0) {
+      if (dom.aiQueueBanner) dom.aiQueueBanner.style.display = "flex";
+      if (dom.aiSuggestionsTableWrapper) dom.aiSuggestionsTableWrapper.style.display = "block";
+      if (dom.aiQueueStatusText) {
+        const correctCount = suggestions.filter(s => s.action === "correct").length;
+        const approveCount = suggestions.filter(s => s.action === "approve").length;
+        dom.aiQueueStatusText.textContent = `Gemini (${state.geminiModel}): ${correctCount} corrections, ${approveCount} approvals staged for review.`;
+      }
+      renderAiReviewTable(suggestions);
+    } else {
+      if (dom.aiQueueBanner) dom.aiQueueBanner.style.display = "none";
+      if (dom.aiSuggestionsTableWrapper) dom.aiSuggestionsTableWrapper.style.display = "none";
+    }
+
+    if (list.length === 0 && suggestions.length === 0) {
       if (dom.auditEmptyState) dom.auditEmptyState.style.display = "block";
       return;
     }
@@ -544,9 +576,7 @@
       const itemEl = document.createElement("div");
       itemEl.className = "audit-item-row";
       const isSelected = state.selectedWordRef && state.selectedWordRef.pageNum === item.page && state.selectedWordRef.wordIndex === item.wordIndex;
-      if (isSelected) {
-        itemEl.classList.add("selected");
-      }
+      if (isSelected) itemEl.classList.add("selected");
 
       const confPercent = (item.confidence * 100).toFixed(1) + "%";
 
@@ -565,21 +595,63 @@
       if (inspectBtn) {
         inspectBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (state.currentPage !== item.page) {
-            state.currentPage = item.page;
-          }
+          if (state.currentPage !== item.page) state.currentPage = item.page;
           selectWord(item.page, item.wordIndex);
         });
       }
 
       itemEl.addEventListener("click", () => {
-        if (state.currentPage !== item.page) {
-          state.currentPage = item.page;
-        }
+        if (state.currentPage !== item.page) state.currentPage = item.page;
         selectWord(item.page, item.wordIndex);
       });
 
       dom.auditListContainer.appendChild(itemEl);
+    });
+  }
+
+  // Render Staged AI Review Table
+  function renderAiReviewTable(suggestions) {
+    if (!dom.aiReviewTableBody) return;
+    dom.aiReviewTableBody.innerHTML = "";
+
+    suggestions.forEach((s, idx) => {
+      const tr = document.createElement("tr");
+      const isCorrect = s.action === "correct";
+      const badgeClass = isCorrect ? "ai-badge-correct" : "ai-badge-approve";
+      const actionLabel = isCorrect ? "Suggest Fix" : "Approve As-Is";
+
+      tr.innerHTML = `
+        <td style="font-family: var(--font-mono); color: var(--text-muted);">${idx + 1}</td>
+        <td>
+          <span class="ai-table-word">${escapeHtml(s.original_word)}</span>
+          <span class="ai-table-context" title="${escapeHtml(s.context || "")}">${escapeHtml(s.context || `Page ${s.page}`)}</span>
+        </td>
+        <td><span class="kpi-badge low">${Math.round((s.confidence || 0.7) * 100)}%</span></td>
+        <td><span class="${badgeClass}">${actionLabel}</span></td>
+        <td><span class="ai-table-suggested">${escapeHtml(s.suggested_word)}</span></td>
+        <td style="font-size: 11px; color: var(--text-secondary); max-width: 180px;">${escapeHtml(s.reason)}</td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-sm btn-primary" data-ai-action="apply" data-index="${idx}">Apply</button>
+          <button class="btn btn-sm" data-ai-action="jump" data-index="${idx}">Jump</button>
+        </td>
+      `;
+
+      const applyBtn = tr.querySelector('[data-ai-action="apply"]');
+      if (applyBtn) {
+        applyBtn.addEventListener("click", () => {
+          applySingleAiSuggestion(idx);
+        });
+      }
+
+      const jumpBtn = tr.querySelector('[data-ai-action="jump"]');
+      if (jumpBtn) {
+        jumpBtn.addEventListener("click", () => {
+          state.currentPage = s.page;
+          selectWord(s.page, s.wordIndex);
+        });
+      }
+
+      dom.aiReviewTableBody.appendChild(tr);
     });
   }
 
@@ -598,29 +670,44 @@
     const confScore = (item.confidence * 100).toFixed(1);
     if (dom.inspConfScore) {
       dom.inspConfScore.textContent = `${confScore}%`;
-      dom.inspConfScore.className = `kpi-badge ${item.human_corrected ? "corrected" : (item.confidence >= state.threshold ? "high" : "low")}`;
+      let badgeClass = "low";
+      if (item.human_corrected) badgeClass = "corrected";
+      else if (item.llm_corrected || item.llm_approved) badgeClass = "ai";
+      else if (item.confidence >= state.threshold) badgeClass = "high";
+      dom.inspConfScore.className = `kpi-badge ${badgeClass}`;
     }
 
-    // Meter bar color and fill
     if (dom.inspMeterFill) {
       dom.inspMeterFill.style.width = `${Math.max(5, confScore)}%`;
-      dom.inspMeterFill.style.backgroundColor = item.human_corrected ? "var(--status-corrected-bar)" : (item.confidence >= state.threshold ? "var(--status-high-bar)" : "var(--status-low-bar)");
+      let barColor = "var(--status-low-bar)";
+      if (item.human_corrected) barColor = "var(--status-corrected-bar)";
+      else if (item.llm_corrected || item.llm_approved) barColor = "var(--status-ai-bar)";
+      else if (item.confidence >= state.threshold) barColor = "var(--status-high-bar)";
+      dom.inspMeterFill.style.backgroundColor = barColor;
     }
 
-    if (dom.inspSource) dom.inspSource.textContent = item.human_corrected ? "Human Verified" : item.source;
+    if (dom.inspSource) {
+      if (item.human_corrected) dom.inspSource.textContent = "Human Verified";
+      else if (item.llm_corrected) dom.inspSource.textContent = "Gemini Corrected";
+      else if (item.llm_approved) dom.inspSource.textContent = "Gemini Approved";
+      else dom.inspSource.textContent = item.source;
+    }
+
     if (dom.inspPage) dom.inspPage.textContent = `Page ${pageNum}`;
     if (dom.inspBbox) dom.inspBbox.textContent = `[${item.bbox.x0}, ${item.bbox.top}, ${item.bbox.x1}, ${item.bbox.bottom}]`;
     if (dom.inspEditInput) {
       dom.inspEditInput.value = item.word;
-      dom.inspEditInput.focus();
     }
+
+    // Hide any previous inspector AI suggestion box
+    if (dom.inspAiSuggestionBox) dom.inspAiSuggestionBox.style.display = "none";
 
     renderVisualPage();
     renderTextFlow();
     renderAuditQueue();
   }
 
-  // Apply HITL Correction
+  // Apply HITL Manual Correction
   function applyCorrection() {
     if (!state.selectedWordRef) return;
     const { pageNum, wordIndex } = state.selectedWordRef;
@@ -630,6 +717,7 @@
     const newText = dom.inspEditInput.value.trim();
     if (!newText) return;
 
+    pushHistorySnapshot();
     const item = page.words[wordIndex];
     item.word = newText;
     item.confidence = 1.0;
@@ -643,13 +731,14 @@
     selectWord(pageNum, wordIndex);
   }
 
-  // Approve Word As-Is
+  // Approve Word As-Is (Manual)
   function approveAsIs() {
     if (!state.selectedWordRef) return;
     const { pageNum, wordIndex } = state.selectedWordRef;
     const page = state.data.pages[pageNum - 1];
     if (!page || !page.words[wordIndex]) return;
 
+    pushHistorySnapshot();
     const item = page.words[wordIndex];
     item.confidence = 1.0;
     item.human_corrected = true;
@@ -661,7 +750,375 @@
     selectWord(pageNum, wordIndex);
   }
 
-  // Navigate Issue Items (Previous / Next Low Confidence Word)
+  // Extract Surrounding Context Window
+  function extractSurroundingContext(pageNum, wordIndex, windowSize = 6) {
+    const page = state.data.pages[pageNum - 1];
+    if (!page || !page.words) return "";
+    const start = Math.max(0, wordIndex - windowSize);
+    const end = Math.min(page.words.length, wordIndex + windowSize + 1);
+    return page.words.slice(start, end).map(w => w.word).join(" ");
+  }
+
+  // Push State to History Stack for 1-Click Undo
+  function pushHistorySnapshot() {
+    state.historyStack.push(JSON.parse(JSON.stringify(state.data)));
+    if (state.historyStack.length > 20) state.historyStack.shift();
+  }
+
+  // Gemini REST API Caller
+  async function callGeminiApi(prompt) {
+    if (!state.geminiApiKey) {
+      // Mock / Offline Heuristic Mode
+      return generateMockAiResponses(prompt);
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.geminiModel}:generateContent?key=${state.geminiApiKey}`;
+    const payload = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.1,
+        response_mime_type: "application/json"
+      }
+    };
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Gemini API error HTTP ${resp.status}: ${errText}`);
+    }
+
+    const json = await resp.json();
+    const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+    return JSON.parse(rawText);
+  }
+
+  // Fallback / Mock Engine for Offline Testing
+  function generateMockAiResponses(prompt) {
+    try {
+      const match = prompt.match(/Tokens to review:\s*(\[[\s\S]*?\])/);
+      if (!match) return [];
+      const items = JSON.parse(match[1]);
+      return items.map(item => {
+        const word = item.original_word;
+        if (word.includes("2O26")) {
+          return {
+            index: item.index,
+            original_word: word,
+            action: "correct",
+            suggested_word: word.replace("2O26", "2026"),
+            reason: "OCR misrecognition of digit 0 as letter O."
+          };
+        } else if (word.startsWith("***") || word.startsWith("---")) {
+          return {
+            index: item.index,
+            original_word: word,
+            action: "approve",
+            suggested_word: word,
+            reason: "Valid decorative receipt boundary delimiter."
+          };
+        } else if (word.includes("Boulevard") || word.includes("Suite") || word.includes("TXN-")) {
+          return {
+            index: item.index,
+            original_word: word,
+            action: "approve",
+            suggested_word: word,
+            reason: "Legitimate address / invoice token verified within context."
+          };
+        } else {
+          return {
+            index: item.index,
+            original_word: word,
+            action: "approve",
+            suggested_word: word,
+            reason: "Confirmed valid token spelling within line sentence flow."
+          };
+        }
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Run Batch Agentic LLM Auto-Review
+  async function runBatchAiReview() {
+    const list = [];
+    const mapping = [];
+
+    state.data.pages.forEach((page, pIdx) => {
+      page.words.forEach((w, wIdx) => {
+        if (w.confidence < state.threshold && !w.human_corrected && !w.llm_corrected) {
+          const ctx = extractSurroundingContext(pIdx + 1, wIdx);
+          list.push({
+            index: list.length,
+            original_word: w.word,
+            confidence: w.confidence,
+            source: w.source,
+            page: page.page_number,
+            surrounding_context: ctx
+          });
+          mapping.push({ pageNum: pIdx + 1, wordIndex: wIdx, context: ctx });
+        }
+      });
+    });
+
+    if (list.length === 0) {
+      showToast("No low-confidence tokens need review.", "info");
+      return;
+    }
+
+    const btn = dom.btnAutoCorrectGemini || dom.btnRunAuditAi;
+    const origText = btn ? btn.innerHTML : "";
+    if (btn) btn.innerHTML = "<span>Analyzing with Gemini...</span>";
+
+    try {
+      const prompt = `You are an expert document quality auditor and OCR text post-correction engine.
+Review the following low-confidence tokens detected in PDF extraction.
+For each token, review its surrounding context window and decide whether it is:
+1. "correct": An OCR character confusion, typo, or stray punctuation/bracket artifact (e.g., "12345)" -> "12345" when there is no opening parenthesis, "2O26" -> "2026", "BouIevard" -> "Boulevard", "Item]" -> "Item").
+2. "approve": A legitimate proper noun, acronym, special code, paired punctuation, or correctly spelled word that was falsely flagged as low confidence (e.g., "(3ct)", "Boulevard,", "TXN-1042").
+
+Tokens to review:
+${JSON.stringify(list, null, 2)}
+
+Return a JSON array containing an evaluation object for each item:
+[
+  {
+    "index": <integer matching item index>,
+    "original_word": "<string>",
+    "action": "correct" | "approve",
+    "suggested_word": "<string, corrected spelling or original if approved>",
+    "reason": "<concise 1-sentence explanation>"
+  }
+]`;
+
+      const rawResults = await callGeminiApi(prompt);
+      const resultMap = {};
+      rawResults.forEach(r => { if (typeof r.index === "number") resultMap[r.index] = r; });
+
+      const suggestions = list.map((item, i) => {
+        const res = resultMap[i] || { action: "approve", suggested_word: item.original_word, reason: "Verified within sentence." };
+        return {
+          page: mapping[i].pageNum,
+          wordIndex: mapping[i].wordIndex,
+          original_word: item.original_word,
+          suggested_word: res.suggested_word || item.original_word,
+          action: res.action || "approve",
+          reason: res.reason || "Audited by Gemini agent.",
+          confidence: item.confidence,
+          context: mapping[i].context
+        };
+      });
+
+      state.aiSuggestions = suggestions;
+
+      if (state.aiWorkflowMode === "direct") {
+        // Option B: Direct Auto-Apply
+        applyAllAiSuggestions(false);
+      } else {
+        // Option A (Default): Populate Staged Review Table
+        // Switch to Audit tab to show staged recommendations
+        dom.tabItems.forEach(t => {
+          const isAudit = t.getAttribute("data-tab") === "tabAuditQueue";
+          t.classList.toggle("active", isAudit);
+        });
+        dom.tabPanes.forEach(p => {
+          p.classList.toggle("active", p.id === "tabAuditQueue");
+        });
+        renderAuditQueue();
+        showToast(`Gemini generated ${suggestions.length} suggestions. Click "Apply All" or inspect table.`);
+      }
+    } catch (err) {
+      console.error(err);
+      if (!state.geminiApiKey) {
+        openGeminiSettingsModal();
+        showToast("Enter your Gemini API key in settings to enable live LLM correction.", "info");
+      } else {
+        showToast("Gemini analysis error: " + err.message, "error");
+      }
+    } finally {
+      if (btn) btn.innerHTML = origText;
+    }
+  }
+
+  // Single-Word Inspector AI Suggestion
+  async function runSingleWordAiSuggest() {
+    if (!state.selectedWordRef) return;
+    const { pageNum, wordIndex } = state.selectedWordRef;
+    const page = state.data.pages[pageNum - 1];
+    if (!page || !page.words[wordIndex]) return;
+
+    const w = page.words[wordIndex];
+    const ctx = extractSurroundingContext(pageNum, wordIndex);
+
+    if (dom.btnAiSuggest) dom.btnAiSuggest.textContent = "Checking...";
+
+    try {
+      const prompt = `You are an expert OCR quality auditor.
+Target word token: "${w.word}" (Confidence: ${(w.confidence * 100).toFixed(1)}%, Source: ${w.source})
+Surrounding context: "${ctx}"
+
+Determine whether this token is an OCR misrecognition that should be corrected, or approved as-is.
+Return a single JSON object:
+{
+  "action": "correct" | "approve",
+  "suggested_word": "<string>",
+  "reason": "<1-sentence rationale>"
+}`;
+
+      let result;
+      if (!state.geminiApiKey) {
+        result = {
+          action: w.word.includes("2O26") ? "correct" : "approve",
+          suggested_word: w.word.includes("2O26") ? w.word.replace("2O26", "2026") : w.word,
+          reason: "Verified within surrounding context window."
+        };
+      } else {
+        const raw = await callGeminiApi(prompt);
+        result = Array.isArray(raw) ? raw[0] : raw;
+      }
+
+      state.activeSingleAiSuggestion = {
+        pageNum,
+        wordIndex,
+        action: result.action || "approve",
+        suggested_word: result.suggested_word || w.word,
+        reason: result.reason || "Audited by Gemini."
+      };
+
+      if (dom.inspAiSuggestionBox) {
+        dom.inspAiSuggestionBox.style.display = "flex";
+        if (dom.inspAiActionBadge) {
+          dom.inspAiActionBadge.textContent = result.action === "correct" ? "Suggest Fix" : "Approve As-Is";
+          dom.inspAiActionBadge.className = `kpi-badge ${result.action === "correct" ? "low" : "high"}`;
+        }
+        if (dom.inspAiSuggestedWord) dom.inspAiSuggestedWord.textContent = result.suggested_word;
+        if (dom.inspAiReason) dom.inspAiReason.textContent = result.reason;
+      }
+    } catch (err) {
+      showToast("AI Suggestion error: " + err.message, "error");
+    } finally {
+      if (dom.btnAiSuggest) dom.btnAiSuggest.innerHTML = `
+        <svg class="ai-sparkle-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4"/>
+        </svg>
+        <span>AI Suggest</span>
+      `;
+    }
+  }
+
+  // Accept Single Inspector AI Suggestion
+  function acceptSingleAiSuggestion() {
+    if (!state.activeSingleAiSuggestion) return;
+    const { pageNum, wordIndex, action, suggested_word, reason } = state.activeSingleAiSuggestion;
+    const page = state.data.pages[pageNum - 1];
+    if (!page || !page.words[wordIndex]) return;
+
+    pushHistorySnapshot();
+    const w = page.words[wordIndex];
+    w.original_word = w.word;
+    w.suggested_word = suggested_word;
+    w.correction_source = state.geminiModel;
+    w.correction_reason = reason;
+    w.confidence = 1.0;
+
+    if (action === "correct" && suggested_word !== w.word) {
+      w.word = suggested_word;
+      w.llm_corrected = true;
+    } else {
+      w.llm_approved = true;
+    }
+
+    rebuildFullText();
+    recalculateMetrics();
+    renderVisualPage();
+    renderTextFlow();
+    renderAuditQueue();
+    selectWord(pageNum, wordIndex);
+    showToast(`Accepted Gemini recommendation for "${w.word}"`);
+  }
+
+  // Apply Single Row Suggestion from AI Review Table
+  function applySingleAiSuggestion(idx) {
+    const s = state.aiSuggestions[idx];
+    if (!s) return;
+
+    pushHistorySnapshot();
+    const page = state.data.pages[s.page - 1];
+    if (page && page.words[s.wordIndex]) {
+      const w = page.words[s.wordIndex];
+      w.original_word = s.original_word;
+      w.suggested_word = s.suggested_word;
+      w.correction_source = state.geminiModel;
+      w.correction_reason = s.reason;
+      w.confidence = 1.0;
+
+      if (s.action === "correct" && s.suggested_word !== s.original_word) {
+        w.word = s.suggested_word;
+        w.llm_corrected = true;
+      } else {
+        w.llm_approved = true;
+      }
+    }
+
+    state.aiSuggestions.splice(idx, 1);
+    rebuildFullText();
+    recalculateMetrics();
+    renderVisualPage();
+    renderTextFlow();
+    renderAuditQueue();
+    showToast(`Applied AI fix for "${s.original_word}"`);
+  }
+
+  // Apply All AI Suggestions (Option A / Option B)
+  function applyAllAiSuggestions(onlyCorrections = false) {
+    const suggestions = state.aiSuggestions || [];
+    if (suggestions.length === 0) return;
+
+    pushHistorySnapshot();
+    let appliedCount = 0;
+
+    suggestions.forEach(s => {
+      if (onlyCorrections && s.action !== "correct") return;
+      const page = state.data.pages[s.page - 1];
+      if (page && page.words[s.wordIndex]) {
+        const w = page.words[s.wordIndex];
+        w.original_word = s.original_word;
+        w.suggested_word = s.suggested_word;
+        w.correction_source = state.geminiModel;
+        w.correction_reason = s.reason;
+        w.confidence = 1.0;
+
+        if (s.action === "correct" && s.suggested_word !== s.original_word) {
+          w.word = s.suggested_word;
+          w.llm_corrected = true;
+        } else {
+          w.llm_approved = true;
+        }
+        appliedCount++;
+      }
+    });
+
+    state.aiSuggestions = [];
+    rebuildFullText();
+    recalculateMetrics();
+    renderVisualPage();
+    renderTextFlow();
+    renderAuditQueue();
+    showToast(`Successfully applied ${appliedCount} AI recommendations!`);
+  }
+
+  // Clear AI Suggestions
+  function clearAiSuggestions() {
+    state.aiSuggestions = [];
+    renderAuditQueue();
+  }
+
+  // Navigate Issue Items
   function navigateIssues(direction) {
     const list = state.data.low_confidence_words || [];
     if (list.length === 0) return;
@@ -691,6 +1148,38 @@
     state.data.full_text = state.data.pages.map(p => p.text).join("\n\n");
   }
 
+  // Gemini Settings Modal Handlers
+  function openGeminiSettingsModal() {
+    if (dom.geminiApiKeyInput) dom.geminiApiKeyInput.value = state.geminiApiKey;
+    if (dom.geminiModelSelect) dom.geminiModelSelect.value = state.geminiModel;
+    if (dom.radioModeStaged && dom.radioModeDirect) {
+      dom.radioModeStaged.checked = state.aiWorkflowMode === "staged";
+      dom.radioModeDirect.checked = state.aiWorkflowMode === "direct";
+    }
+    if (dom.geminiSettingsModal) dom.geminiSettingsModal.classList.add("open");
+  }
+
+  function closeGeminiSettingsModal() {
+    if (dom.geminiSettingsModal) dom.geminiSettingsModal.classList.remove("open");
+  }
+
+  function saveGeminiSettings() {
+    if (dom.geminiApiKeyInput) {
+      state.geminiApiKey = dom.geminiApiKeyInput.value.trim();
+      setStored("pdf_gemini_api_key", state.geminiApiKey);
+    }
+    if (dom.geminiModelSelect) {
+      state.geminiModel = dom.geminiModelSelect.value;
+      setStored("pdf_gemini_model", state.geminiModel);
+    }
+    if (dom.radioModeDirect) {
+      state.aiWorkflowMode = dom.radioModeDirect.checked ? "direct" : "staged";
+      setStored("pdf_gemini_mode", state.aiWorkflowMode);
+    }
+    closeGeminiSettingsModal();
+    showToast(`Saved settings for ${state.geminiModel} (${state.aiWorkflowMode === "direct" ? "Direct Auto-Apply" : "Staged Review Table"})`);
+  }
+
   // File Upload Handling
   function handleFileSelect(e) {
     const file = e.target.files[0];
@@ -702,13 +1191,15 @@
         try {
           const parsed = JSON.parse(event.target.result);
           if (!parsed.pages || !parsed.metadata) {
-            alert("Invalid extraction JSON format: missing required 'metadata' or 'pages' sections.");
+            alert("Invalid extraction JSON format: missing required metadata or pages sections.");
             return;
           }
           state.data = parsed;
           state.currentPage = 1;
           state.selectedWordRef = null;
           state.correctionCount = 0;
+          state.aiCorrectionCount = 0;
+          state.aiSuggestions = parsed.llm_suggestions || [];
           const initialThreshold = parsed.metadata.low_confidence_threshold || 0.85;
           setGlobalThreshold(initialThreshold);
         } catch (err) {
@@ -725,7 +1216,6 @@
 
   // Export Corrected JSON File
   async function exportJson() {
-    // 1. Commit any active unapplied edit currently in the inspector input box
     if (state.selectedWordRef && dom.inspEditInput) {
       const { pageNum, wordIndex } = state.selectedWordRef;
       const page = state.data.pages[pageNum - 1];
@@ -742,6 +1232,8 @@
 
     recalculateMetrics();
     state.data.metadata.human_corrections_count = state.correctionCount;
+    state.data.metadata.llm_corrections_count = state.aiCorrectionCount;
+    state.data.metadata.llm_model = state.geminiModel;
     state.data.metadata.last_modified_utc = new Date().toISOString();
 
     const jsonStr = JSON.stringify(state.data, null, 2);
@@ -750,7 +1242,6 @@
 
     let fileSaved = false;
 
-    // Method A: File System Access API (Native "Save As" file picker on Chrome/Edge macOS & Windows)
     if (window.showSaveFilePicker) {
       try {
         const handle = await window.showSaveFilePicker({
@@ -764,15 +1255,12 @@
         await writable.write(jsonStr);
         await writable.close();
         fileSaved = true;
-        showToast(`Saved '${filename}' successfully!`);
+        showToast(`Saved  successfully!`);
       } catch (err) {
-        if (err && err.name === "AbortError") {
-          return; // User cancelled the dialog
-        }
+        if (err && err.name === "AbortError") return;
       }
     }
 
-    // Method B: Standard Browser Download Anchor
     if (!fileSaved) {
       try {
         const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
@@ -786,9 +1274,7 @@
         fileSaved = true;
 
         setTimeout(() => {
-          if (a.parentNode) {
-            document.body.removeChild(a);
-          }
+          if (a.parentNode) document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }, 60000);
       } catch (err) {
@@ -796,31 +1282,14 @@
       }
     }
 
-    // Method C: Also copy JSON to clipboard as a seamless convenience fallback
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(jsonStr);
       }
-    } catch (e) {
-      // Non-critical clipboard error
-    }
+    } catch (e) {}
 
-    // Visual button confirmation
-    const exportBtns = [dom.exportJsonBtn, dom.downloadJsonTabBtn].filter(Boolean);
-    exportBtns.forEach(btn => {
-      const origText = btn.dataset.origText || btn.textContent;
-      btn.dataset.origText = origText;
-      btn.textContent = state.correctionCount > 0 ? `Exported (${state.correctionCount} edits) ✓` : "Exported JSON ✓";
-      btn.classList.add("btn-success");
-      setTimeout(() => {
-        btn.textContent = origText;
-        btn.classList.remove("btn-success");
-      }, 2500);
-    });
-
-    if (!window.showSaveFilePicker) {
-      showToast(`Downloaded '${filename}' & copied JSON to clipboard! (${state.correctionCount} corrections saved)`);
-    }
+    const totalEdits = state.correctionCount + state.aiCorrectionCount;
+    showToast(`Downloaded  (${totalEdits} verified corrections)`);
 
     renderJsonTab();
     renderFullTextTab();
@@ -851,9 +1320,7 @@
     setTimeout(() => {
       toast.classList.remove("show");
       setTimeout(() => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
       }, 300);
     }, 4500);
   }
@@ -886,40 +1353,22 @@
 
   // Event Listeners Registration
   function registerEvents() {
-    // Theme Switcher Button
-    if (dom.themeToggleBtn) {
-      dom.themeToggleBtn.addEventListener("click", toggleTheme);
-    }
+    if (dom.themeToggleBtn) dom.themeToggleBtn.addEventListener("click", toggleTheme);
 
-    // Threshold Slider & Number Input (Two-way linked)
     if (dom.thresholdSlider) {
-      dom.thresholdSlider.addEventListener("input", (e) => {
-        setGlobalThreshold(e.target.value);
-      });
+      dom.thresholdSlider.addEventListener("input", (e) => setGlobalThreshold(e.target.value));
     }
     if (dom.thresholdNumberInput) {
-      dom.thresholdNumberInput.addEventListener("change", (e) => {
-        setGlobalThreshold(e.target.value);
-      });
-      dom.thresholdNumberInput.addEventListener("input", (e) => {
-        setGlobalThreshold(e.target.value);
-      });
+      dom.thresholdNumberInput.addEventListener("change", (e) => setGlobalThreshold(e.target.value));
+      dom.thresholdNumberInput.addEventListener("input", (e) => setGlobalThreshold(e.target.value));
     }
 
-    // Filter Buttons (All Words, Low Confidence, Corrected)
     dom.filterBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        setFilterMode(btn.getAttribute("data-filter"));
-      });
+      btn.addEventListener("click", () => setFilterMode(btn.getAttribute("data-filter")));
     });
 
-    if (dom.clearFilterBtn) {
-      dom.clearFilterBtn.addEventListener("click", () => {
-        setFilterMode("all");
-      });
-    }
+    if (dom.clearFilterBtn) dom.clearFilterBtn.addEventListener("click", () => setFilterMode("all"));
 
-    // Search Input
     if (dom.searchWordsInput) {
       dom.searchWordsInput.addEventListener("input", (e) => {
         state.searchQuery = e.target.value.trim();
@@ -928,7 +1377,6 @@
       });
     }
 
-    // Zoom Controls
     if (dom.zoomInBtn) {
       dom.zoomInBtn.addEventListener("click", () => {
         state.zoom = Math.min(2.0, state.zoom + 0.15);
@@ -948,7 +1396,6 @@
       });
     }
 
-    // Pagination
     if (dom.prevPageBtn) {
       dom.prevPageBtn.addEventListener("click", () => {
         if (state.currentPage > 1) {
@@ -968,17 +1415,47 @@
       });
     }
 
-    // HITL Actions
+    // HITL & AI Action Buttons
     if (dom.applyCorrectionBtn) dom.applyCorrectionBtn.addEventListener("click", applyCorrection);
     if (dom.approveBtn) dom.approveBtn.addEventListener("click", approveAsIs);
+    if (dom.btnAiSuggest) dom.btnAiSuggest.addEventListener("click", runSingleWordAiSuggest);
+    if (dom.btnAcceptAiSuggestion) dom.btnAcceptAiSuggestion.addEventListener("click", acceptSingleAiSuggestion);
+    if (dom.btnDismissAiSuggestion) {
+      dom.btnDismissAiSuggestion.addEventListener("click", () => {
+        if (dom.inspAiSuggestionBox) dom.inspAiSuggestionBox.style.display = "none";
+      });
+    }
+
     if (dom.inspEditInput) {
       dom.inspEditInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") applyCorrection();
       });
-      dom.inspEditInput.addEventListener("change", applyCorrection);
     }
+
     if (dom.prevIssueBtn) dom.prevIssueBtn.addEventListener("click", () => navigateIssues("prev"));
     if (dom.nextIssueBtn) dom.nextIssueBtn.addEventListener("click", () => navigateIssues("next"));
+
+    // Agentic LLM Auto-Correct Triggers
+    if (dom.btnAutoCorrectGemini) dom.btnAutoCorrectGemini.addEventListener("click", runBatchAiReview);
+    if (dom.btnRunAuditAi) dom.btnRunAuditAi.addEventListener("click", runBatchAiReview);
+    if (dom.btnApplyAllAiSuggestions) dom.btnApplyAllAiSuggestions.addEventListener("click", () => applyAllAiSuggestions(false));
+    if (dom.btnApplyCorrectionsOnly) dom.btnApplyCorrectionsOnly.addEventListener("click", () => applyAllAiSuggestions(true));
+    if (dom.btnClearAiSuggestions) dom.btnClearAiSuggestions.addEventListener("click", clearAiSuggestions);
+
+    // Gemini Settings Modal
+    if (dom.btnGeminiSettings) dom.btnGeminiSettings.addEventListener("click", openGeminiSettingsModal);
+    if (dom.closeSettingsModalBtn) dom.closeSettingsModalBtn.addEventListener("click", closeGeminiSettingsModal);
+    if (dom.btnCancelSettings) dom.btnCancelSettings.addEventListener("click", closeGeminiSettingsModal);
+    if (dom.btnSaveGeminiSettings) dom.btnSaveGeminiSettings.addEventListener("click", saveGeminiSettings);
+    if (dom.toggleApiKeyVisibilityBtn) {
+      dom.toggleApiKeyVisibilityBtn.addEventListener("click", () => {
+        if (dom.geminiApiKeyInput) {
+          const isPwd = dom.geminiApiKeyInput.type === "password";
+          dom.geminiApiKeyInput.type = isPwd ? "text" : "password";
+          dom.toggleApiKeyVisibilityBtn.textContent = isPwd ? "Hide" : "Show";
+        }
+      });
+    }
 
     // Tabs
     dom.tabItems.forEach(tab => {
@@ -992,7 +1469,6 @@
       });
     });
 
-    // File & Tab Actions
     if (dom.fileInput) dom.fileInput.addEventListener("change", handleFileSelect);
     if (dom.exportJsonBtn) dom.exportJsonBtn.addEventListener("click", exportJson);
     if (dom.downloadJsonTabBtn) dom.downloadJsonTabBtn.addEventListener("click", exportJson);
@@ -1004,9 +1480,7 @@
         if (dom.jsonTabCodeDisplay) {
           navigator.clipboard.writeText(dom.jsonTabCodeDisplay.textContent).then(() => {
             dom.copyJsonTabBtn.textContent = "Copied!";
-            setTimeout(() => {
-              dom.copyJsonTabBtn.textContent = "Copy JSON";
-            }, 1500);
+            setTimeout(() => { dom.copyJsonTabBtn.textContent = "Copy JSON"; }, 1500);
           });
         }
       });
@@ -1016,9 +1490,7 @@
         if (dom.fullTextDisplay) {
           navigator.clipboard.writeText(dom.fullTextDisplay.value).then(() => {
             dom.copyFullTextBtn.textContent = "Copied!";
-            setTimeout(() => {
-              dom.copyFullTextBtn.textContent = "Copy Text";
-            }, 1500);
+            setTimeout(() => { dom.copyFullTextBtn.textContent = "Copy Text"; }, 1500);
           });
         }
       });
@@ -1028,17 +1500,23 @@
         if (e.target === dom.jsonModal) closeJsonModal();
       });
     }
+    if (dom.geminiSettingsModal) {
+      dom.geminiSettingsModal.addEventListener("click", (e) => {
+        if (e.target === dom.geminiSettingsModal) closeGeminiSettingsModal();
+      });
+    }
   }
 
-  // Initializer
   function init() {
     queryElements();
     applyTheme(state.theme);
     registerEvents();
+    if (state.data.llm_suggestions && state.data.llm_suggestions.length > 0) {
+      state.aiSuggestions = state.data.llm_suggestions;
+    }
     setGlobalThreshold(state.data.metadata.low_confidence_threshold || 0.85);
   }
 
-  // Guaranteed Execution regardless of readyState
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {

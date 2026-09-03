@@ -54,6 +54,17 @@ python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
   --validate
 ```
 
+To enable **Agentic LLM Word Correction** with Gemini:
+```bash
+python3 skills/pdf-extract-confidence/scripts/extract_pdf.py \
+  --input "samples/104-10062-10073.pdf" \
+  --output "samples/104-10062-10073_extracted.json" \
+  --html-output "samples/104-10062-10073_dashboard.html" \
+  --llm-correct \
+  --llm-model "gemini-3.7-flash" \
+  --validate
+```
+
 Key CLI flags:
 - `-i, --input PATH`: Target input PDF file (required).
 - `-o, --output PATH`: Output JSON file path.
@@ -64,34 +75,42 @@ Key CLI flags:
 - `--dpi INT`: Rendering resolution for rasterizing pages before OCR (default: 200).
 - `--validate`: Validates output against the resource schema.
 - `--compact`: Generates compact unformatted JSON instead of indented formatting.
+- `--llm-correct`: Enable agentic LLM (Gemini) word correction for low-confidence tokens.
+- `--gemini-api-key KEY`: API Key for Gemini (defaults to `GEMINI_API_KEY` environment variable).
+- `--llm-model MODEL`: Gemini model identifier (default: `gemini-3.7-flash`).
+- `--llm-auto-apply`: Automatically apply all LLM suggestions directly to the text and word array (Option B).
+- `--mock-llm`: Offline heuristic mock mode for testing without API keys.
 
 ### Step 3: Verify Output Integrity
 
 1. Check that the script completed with exit code 0.
 2. Read the output JSON file and verify the top-level sections:
-   - `metadata`: Contains total_pages, total_words, mean_confidence, min_confidence, low_confidence_count.
+   - `metadata`: Contains total_pages, total_words, mean_confidence, min_confidence, low_confidence_count, human_corrections_count, llm_corrections_count.
    - `full_text`: Consolidated plain text for direct consumption.
    - `pages`: Array of per-page objects containing text and word arrays.
    - `low_confidence_words`: Array containing any words with confidence < threshold.
+   - `llm_suggestions`: Optional array of LLM audit recommendations.
 
-### Step 4: Visual UI Dashboard Presentation
+### Step 4: Visual UI Dashboard & Dual HITL / AI Review
 
 Always generate the standalone dashboard file by including `--html-output <basename>_dashboard.html` in Step 2:
 1. The script bundles the HTML markup, CSS stylesheet, and extracted JSON payload into a self-contained single-file HTML dashboard that works out-of-the-box in any browser or iframe without external network requests or file uploading.
 2. The interactive UI dashboard provides:
-   - Dynamic Confidence Threshold Slider & Number Input: Adjusting the threshold immediately updates word highlights across both the visual document and text views.
-   - Visual Page View with Bounding Boxes: Overlays bounding boxes on the rendered PDF sheet, color-coded by confidence (green for high confidence, amber/red for below threshold, purple for human-corrected).
-   - Right-Pane Tabbed Workspace: Includes Document Text & Word Inspector, Full Plain Text with copy button, Live JSON Output with copy and download buttons, and Audit Review Queue with jump buttons.
-   - Light and Dark Theme Toggle: Supports both light and dark modes with safe storage.
-   - Export Corrected JSON: Allows downloading the updated JSON matching `schema.json` with all manual corrections preserved.
+   - **Dual Verification Pathways**: Pure manual inspection with Word Inspector AND one-click **"Auto-Correct with Gemini"** agentic review.
+   - **Staged AI Review Table (Option A - Default)**: Displays Gemini's suggested fixes, rationales, and an instant **"Apply All Suggestions"** button to minimize human-in-the-loop overhead.
+   - **Direct Auto-Apply (Option B)**: Instantly applies LLM suggestions with an undo snapshot stack.
+   - **Word Inspector AI Suggest**: Ask Gemini for recommendations on individual selected tokens with 1-click accept.
+   - **Dynamic Confidence Threshold Slider & Number Input**: Real-time bounding box and token chip highlighting.
+   - **Visual Document Overlays**: Color-coded bounding boxes (green for high confidence, red for low confidence, purple for human-corrected, indigo for LLM-verified).
+   - **Export Corrected JSON**: Exports schema-compliant JSON preserving all human and AI corrections and audit metadata.
 
 ### Step 5: Present Findings to the User
 
 Provide a clean, structured summary containing:
 1. Document metadata (file name, total pages, total words extracted).
 2. Overall confidence metrics (mean confidence, minimum confidence).
-3. Audit summary: Number of low-confidence words detected.
-4. If low-confidence words exist, list the top flagged words with page number, confidence score, and bounding box.
+3. Audit summary: Number of low-confidence words detected and LLM suggestions generated.
+4. If low-confidence words exist, list the top flagged words with page number, confidence score, and suggested AI actions.
 5. Location of the generated JSON output file and interactive HTML dashboard.
 
 ## Downstream Consumption Patterns
@@ -113,11 +132,13 @@ Or run individual test modules directly:
 ```bash
 python3 tests/test_extractor.py
 python3 tests/test_schema.py
+python3 tests/test_llm_correction.py
 ```
 
 ## References and Resources
 
 - Extraction Script: [extract_pdf.py](skills/pdf-extract-confidence/scripts/extract_pdf.py)
+- LLM Correction Engine: [llm_correction.py](skills/pdf-extract-confidence/scripts/llm_correction.py)
 - UI Dashboard Template: [index.html](skills/pdf-extract-confidence/ui/index.html)
 - UI Stylesheet: [styles.css](skills/pdf-extract-confidence/ui/styles.css)
 - UI Application Logic: [app.js](skills/pdf-extract-confidence/ui/app.js)
@@ -126,4 +147,4 @@ python3 tests/test_schema.py
 - Sample Output Example: [sample_output.json](skills/pdf-extract-confidence/resources/sample_output.json)
 - Confidence Methodology: [confidence_scoring.md](skills/pdf-extract-confidence/references/confidence_scoring.md)
 - Cloud Engine Adapters: [cloud_adapters.md](skills/pdf-extract-confidence/references/cloud_adapters.md)
-- Unit Tests: [test_extractor.py](tests/test_extractor.py) and [test_schema.py](tests/test_schema.py)
+- Unit Tests: [test_extractor.py](tests/test_extractor.py), [test_schema.py](tests/test_schema.py), and [test_llm_correction.py](tests/test_llm_correction.py)

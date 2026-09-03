@@ -1348,6 +1348,38 @@ Return a single JSON object:
     showToast(`Saved settings for ${state.geminiModel} (${state.aiWorkflowMode === "direct" ? "Direct Auto-Apply" : "Staged Review Table"})`);
   }
 
+  // Central Data Loading Function
+  function loadDataPayload(parsed, sourceName = "") {
+    if (!parsed || !parsed.pages || !parsed.metadata) {
+      showToast("Invalid extraction JSON: missing pages or metadata.", "error");
+      return false;
+    }
+    state.data = parsed;
+    state.currentPage = 1;
+    state.selectedWordRef = null;
+    state.correctionCount = 0;
+    state.aiCorrectionCount = 0;
+    state.aiSuggestions = parsed.llm_suggestions || [];
+    state.historyStack = [];
+    state.activeSingleAiSuggestion = null;
+
+    const initialThreshold = parsed.metadata.low_confidence_threshold || 0.85;
+    setGlobalThreshold(initialThreshold);
+    renderVisualPage();
+    renderTextFlow();
+    renderAuditQueue();
+    renderFullTextTab();
+    renderJsonTab();
+
+    const docName = parsed.metadata.filename || sourceName || "document";
+    showToast(`Loaded document: ${docName}`);
+    return true;
+  }
+
+  // Expose global injection functions for agent harnesses and parent frames
+  window.loadExtractionData = loadDataPayload;
+  window.setExtractionPayload = loadDataPayload;
+
   // File Upload Handling
   function handleFileSelect(e) {
     const file = e.target.files[0];
@@ -1358,18 +1390,7 @@ Return a single JSON object:
       reader.onload = function (event) {
         try {
           const parsed = JSON.parse(event.target.result);
-          if (!parsed.pages || !parsed.metadata) {
-            alert("Invalid extraction JSON format: missing required metadata or pages sections.");
-            return;
-          }
-          state.data = parsed;
-          state.currentPage = 1;
-          state.selectedWordRef = null;
-          state.correctionCount = 0;
-          state.aiCorrectionCount = 0;
-          state.aiSuggestions = parsed.llm_suggestions || [];
-          const initialThreshold = parsed.metadata.low_confidence_threshold || 0.85;
-          setGlobalThreshold(initialThreshold);
+          loadDataPayload(parsed, file.name);
         } catch (err) {
           alert("Error parsing JSON file: " + err.message);
         }
@@ -1675,10 +1696,78 @@ Return a single JSON object:
     }
   }
 
+  function checkUrlParams() {
+    try {
+      if (typeof window === "undefined" || !window.location) return;
+      const params = new URLSearchParams(window.location.search);
+      const jsonParam = params.get("json") || params.get("data") || params.get("file") || params.get("src") || params.get("doc");
+      if (jsonParam) {
+        if (jsonParam.trim().startsWith("{") || jsonParam.trim().startsWith("[")) {
+          const parsed = JSON.parse(jsonParam);
+          loadDataPayload(parsed, "URL Payload");
+        } else {
+          fetch(jsonParam)
+            .then(r => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return r.json();
+            })
+            .then(data => loadDataPayload(data, jsonParam))
+            .catch(err => console.warn("Failed to load JSON from URL parameter:", err));
+        }
+      }
+    } catch (e) {
+      console.warn("URL params check error:", e);
+    }
+  }
+
   function init() {
     queryElements();
     applyTheme(state.theme);
     registerEvents();
+
+    // Check if host environment pre-set extraction data on window
+    if (typeof window !== "undefined" && window.__EXTRACTION_DATA__) {
+      loadDataPayload(window.__EXTRACTION_DATA__, "Host Data");
+      return;
+    }
+
+    // Check if URL parameters specified a JSON file or payload
+    checkUrlParams();
+
+    // Listen for data from parent frame / agent harness via postMessage
+    if (typeof window !== "undefined") {
+      window.addEventListener("message", function (e) {
+        if (!e.data) return;
+        let payload = e.data.data || e.data.payload || e.data;
+        if (typeof payload === "string") {
+          try { payload = JSON.parse(payload); } catch (err) {}
+        }
+        if (payload && typeof payload === "object" && payload.pages && payload.metadata) {
+          loadDataPayload(payload, payload.metadata.filename || "Injected Payload");
+        }
+      });
+
+      // Global window drag & drop loader
+      window.addEventListener("dragover", (e) => { e.preventDefault(); e.stopPropagation(); });
+      window.addEventListener("drop", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file && file.name.endsWith(".json")) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            try {
+              const parsed = JSON.parse(ev.target.result);
+              loadDataPayload(parsed, file.name);
+            } catch (err) {
+              showToast("Error parsing dropped JSON: " + err.message, "error");
+            }
+          };
+          reader.readAsText(file);
+        }
+      });
+    }
+
     if (state.data.llm_suggestions && state.data.llm_suggestions.length > 0) {
       state.aiSuggestions = state.data.llm_suggestions;
     }

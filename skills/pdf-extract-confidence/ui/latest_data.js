@@ -3,7 +3,7 @@ window.__LATEST_EXTRACTION_DATA__ = {
     "filename": "sample_scanned_receipt.pdf",
     "total_pages": 1,
     "extraction_engine": "hybrid_extractor",
-    "timestamp_utc": "2026-09-03T20:58:08.384046+00:00",
+    "timestamp_utc": "2026-09-03T23:23:54.075192+00:00",
     "total_words": 86,
     "mean_confidence": 0.9531,
     "min_confidence": 0.72,

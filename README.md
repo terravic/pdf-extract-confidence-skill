@@ -86,7 +86,7 @@ The extractor implements a hybrid pipeline:
 ```text
 pdf-extract-confidence-skill/
 ├── LICENSE                                # Apache License 2.0
-├── README.md                              # Main documentation (no icons, no emojis)
+├── README.md                              # Main documentation and project guide
 ├── requirements.txt                       # Python dependencies
 ├── pyproject.toml                         # Packaging specification
 ├── assets/
